@@ -1,0 +1,53 @@
+.ubl-detail-tools DIV.additional {
+  display: none;
+  padding: 5px;
+  position: absolute;
+  min-width:300px;
+  max-width:450px;
+  background-color: #7f88ab;
+  z-index: 500;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  border-radius: 3px;
+}
+.ubl-detail-tools DIV.additional DIV.menu {
+  padding: 0 10px 0 20px;
+  margin-bottom: 30px;
+  color:white;
+}
+.ubl-detail-tools DIV.additional DIV.menu H3 {
+  color: white;
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+}
+.ubl-detail-tools DIV.additional DIV.menu TABLE {
+  margin-bottom: 1em;
+}
+.ubl-detail-tools DIV.additional DIV.menu TABLE TR {
+  cursor: pointer;
+}
+.ubl-detail-tools DIV.additional DIV.menu TABLE TR TD:first-child {
+  white-space: nowrap;
+  width: 60%;
+}
+.ubl-detail-tools DIV.additional DIV.menu TABLE TR TD:last-child {
+  text-align: right;
+  font-size: 75%;
+}
+.ubl-detail-tools DIV.additional DIV.menu DIV.access {
+  white-space: nowrap;
+  padding-bottom: 1.5em;
+}
+.ubl-detail-tools DIV.additional DIV.menu DIV.access IMG {
+  height: 35px;
+  float: left;
+  padding:0;
+}
+.ubl-detail-tools DIV.additional DIV.menu DIV.access A {
+  padding:0;
+}
+.ubl-detail-tools DIV.additional DIV.menu DIV.access DIV.text {
+  float: right;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}

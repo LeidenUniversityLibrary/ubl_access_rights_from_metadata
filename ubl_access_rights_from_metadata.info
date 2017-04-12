@@ -1,0 +1,6 @@
+name = UBL Access rights from metadata
+description = Sets and defines the access rights of an object based on its metadata.
+package = UBL
+version = "7.x-1.x-dev"
+core = "7.x"
+

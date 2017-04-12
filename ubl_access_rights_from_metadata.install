@@ -1,0 +1,38 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the ubl_access_rights_from_metadata module.
+ */
+
+
+/**
+ * Implements hook_install().
+ */
+function ubl_access_rights_from_metadata_install() {
+  drupal_mkdir('public://ubl_access_rights_from_metadata');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function ubl_access_rights_from_metadata_uninstall() {
+  $upload_path = 'public://ubl_access_rights_from_metadata';
+  $removal_files = file_scan_directory($upload_path, '/(.*)/');
+
+  foreach ($removal_files as $file) {
+    @file_delete($file);
+  }
+  drupal_rmdir($upload_path);
+}
+
+/**
+ * Implements hook_schema().
+ */
+function ubl_access_rights_from_metadata_schema() {
+  // make custom cache table
+  $schema['cache_ubl_access_rights_from_metadata_config'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_ubl_access_rights_from_metadata_access_rights_value'] = drupal_get_schema_unprocessed('system', 'cache');
+  return $schema;
+}
+

@@ -1,0 +1,232 @@
+<?php
+
+/**
+ * @file
+ * Handle configuration; Parse and validate ini files.
+ */
+
+function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
+  $error = '';
+  $accessconfig = parse_ini_file($inifile, TRUE);
+
+  if ($accessconfig === FALSE || !is_array($accessconfig)) {
+    $error = "Error parsing file '$inifile'.";
+    return FALSE;
+  }
+  foreach ($accessconfig as $key => $values) {
+    if ($key === 'rightssource') {
+      if (!isset($values['dsid'])) {
+        $error = "No key 'dsid' found in '$key'";
+      }
+      if (!isset($values['xpath'])) {
+        $error = "No key 'xpath' found in '$key'";
+      }
+    }
+    elseif ($key === 'internal') {
+      if (!is_array($values) || count($values) != 1 || !isset($values['ip_range'])) {
+        $error = "Section '$key' should only contain 'ip_range' keys";
+      }
+    }
+    elseif (has_prefix($key, 'all:') || has_prefix($key, 'internal:') || has_prefix($key, 'external:')) {
+      if (!array($values) || count($values) == 0) {
+        $error = "Section '$key' should contain at least 1 key";
+      }
+      else {
+        foreach (array('deny_access_to_dsid','allow_access_to_dsid','provide_download_of_dsid','allow_access_for_role') as $k) {
+          if (isset($values[$k]) && !is_array($values[$k])) {
+            $error = "Section '$key' contains key '$k' that is not an array, use '$k\[]'.";
+          }
+        }
+      }
+    }
+    else {
+      $error = "Unexpected section '$key'";
+    }
+    if ($error) {
+      return FALSE;
+    }
+  } 
+
+  return TRUE;
+}
+
+function ubl_access_rights_from_metadata_valid_config_directory($configdir, &$error) {
+  $accessprefix = 'access_rights';
+  $accesspostfix = '.ini';
+  if ($dh = @opendir($configdir)) {
+    $foundaccessini = FALSE;
+    $accessini = $accessprefix . $accesspostfix;
+    while (FALSE !== ($filename = readdir($dh))) {
+      if (has_prefix($filename, $accessprefix) && has_postfix($filename, $accesspostfix)) {
+        $filepath = $configdir . DIRECTORY_SEPARATOR . $filename;
+        $valid = ubl_access_rights_from_metadata_valid_config_file($filepath, $error);
+        if (!$valid) {
+          return FALSE;
+        }
+        if ($filename === $accessini) {
+          $foundaccessini = TRUE;
+        }
+      }
+    }
+    if (!$foundaccessini) {
+      $error = "No mandatory file '$accessini' found in directory '$configdir'";
+      return FALSE;
+    }
+  }
+  else {
+    $error = "Cannot open directory '$configdir'";
+    return FALSE;
+  }
+  return TRUE;
+}
+
+function ubl_access_rights_from_metadata_get_configuration($options) {
+  $config = &drupal_static(__FUNCTION__);
+  if (isset($options['directory'])) {
+    $configdir = $options['directory'];
+  }
+  else {
+    $configdir = drupal_realpath("public://ubl_access_rights_from_metadata");
+  }
+  if (!isset($config[$configdir])) {
+    $stat = stat($configdir);
+    $cachename = $configdir;
+    $cachebin = 'cache_ubl_access_rights_from_metadata_config';
+    if ($cache = cache_get($cachename, $cachebin)) {
+      $data = $cache->data;
+      if ($data['_moddate_'] === $stat['mtime']) {
+        $config[$configdir] = $cache->data;
+      }
+    }
+    if (!isset($config[$configdir])) {
+      $config[$configdir] = array('_moddate_' => $stat['mtime']);
+      if ($dh = @opendir($configdir)) {
+        $accessprefix = 'access_rights';
+        $accesspostfix = '.ini';
+        while (FALSE !== ($filename = readdir($dh))) {
+          if (has_prefix($filename, $accessprefix) && has_postfix($filename, $accesspostfix)) {
+            $filepath = $configdir . DIRECTORY_SEPARATOR . $filename;
+            $aconfig = array();
+            $iniarray = parse_ini_file($filepath, TRUE);
+            if ($iniarray) {
+              foreach ($iniarray as $k => $v) {
+                $parts = explode(':', $k, 2);
+                if (count($parts) == 2) {
+                  list($location,$accessvalue) = $parts;
+                  if (!isset($aconfig[$accessvalue])) {
+                    $aconfig[$accessvalue] = array(); 
+                  }
+                  $aconfig[$accessvalue][$location] = $v;
+                }
+                else {
+                  if (!isset($aconfig['_config'])) {
+                    $aconfig['_config'] = array();
+                  }
+                  if ($k === 'internal') {
+                    $ipranges = array();
+                    foreach ($iniarray[$k]['ip_range'] as $iprange) {
+                      list($minip, $maxip) = explode('-', $iprange);
+                      $ipranges[] = array('min' => ip2long($minip), 'max' => ip2long($maxip));
+                    }
+                    $aconfig['_config'][$k] = array('ip_ranges' => $ipranges);
+                  }
+                  else {
+                    $aconfig['_config'][$k] = $v;
+                  }
+                }
+              } 
+            }
+            $type = substr($filename, strlen($accessprefix) + 1, -strlen($accesspostfix));
+            $config[$configdir][$type] = $aconfig;
+          }
+        }
+      }
+      cache_set($cachename, $config[$configdir], $cachebin);
+    }
+  }
+  if (isset($options['file'])) {
+    $type = substr($options['file'], strlen($accessprefix) + 1, -strlen($accesspostfix));
+    return $config[$configdir][$type];
+  }
+  elseif (isset($options['object'])) {
+    if (count($config[$configdir]) > 1) {
+      $objconfig = ubl_access_rights_from_metadata_config_for_object($config[$configdir], $options['object']);
+      if ($objconfig) {
+        return $objconfig;
+      }
+    }
+  }
+  return $config[$configdir][FALSE];
+}
+
+function ubl_access_rights_from_metadata_config_for_object($config, $obj) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+
+  list ($namespace, $shortpid) = explode(':', $obj->id, 2);
+  if (isset($config[$namespace . '_' . $shortpid])) {
+    return $config[$namespace . '_' . $shortpid];
+  }
+  elseif (isset($config[$namespace])) {
+    return $config[$namespace];
+  }
+
+  try {
+    $relations = array_merge(
+      $obj->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection'),
+      $obj->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf'),
+      $obj->relationships->get(FEDORA_RELS_EXT_URI, 'isConstituentOf'));
+  }
+  catch (RepositoryException $e) {
+    // @todo some logging would be nice, not sure what this throws.
+    return FALSE;
+  }
+  $map = function($o) {
+    return islandora_object_load($o['object']['value']);
+  };
+  $relations = array_filter(array_map($map, $relations));
+
+  foreach ($relations as $relation) {
+    $found = ubl_access_rights_from_metadata_config_for_object($config, $relation);
+    if ($found) {
+      return $found;
+    }
+  }
+  return FALSE;
+}
+
+function ubl_access_rights_from_metadata_get_settings($accessrightsvalue, $config) {
+  $accesssettings = NULL;
+  if (isset($config[$accessrightsvalue])) {
+    $accesssettings = $config[$accessrightsvalue];
+  }
+  else {
+    if (isset($config['otherwise'])) {
+      $accesssettings = $config['otherwise'];
+    }
+  }
+  return $accesssettings;
+}
+
+function _unfold_dsid_array($dsids, $obj, $dontmessdsids = array()) {
+  if (in_array('NONE', $dsids)) {
+    return array();
+  }
+  if (in_array('ALL', $dsids)) {
+    $dsids = array();
+    foreach ($obj as $ds) {
+      $dsid = $ds->id;
+      if (!in_array($dsid, $dontmessdsids)) {
+        $dsids[] = $dsid;
+      }
+    }
+  }
+  return $dsids;
+}
+
+function has_prefix($str, $prefix) {
+  return (substr($str, 0, strlen($prefix)) === $prefix);
+}
+
+function has_postfix($str, $postfix) {
+  return (substr($str, -strlen($postfix)) === $postfix);
+}

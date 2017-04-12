@@ -1,0 +1,113 @@
+<?php
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
+
+/**
+ * @file
+ * ubl_access_rights_from_metadata
+ */
+
+/**
+ * Implements hook_detail_tools_block_view().
+ */
+function ubl_access_rights_from_metadata_detail_tools_block_view() {
+  $block = array();
+
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+  
+  if (arg(1) == 'object' && islandora_is_valid_pid(arg(2))) {
+    drupal_add_css(drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/css/ubl_details_tools.css');
+    drupal_add_js(drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/js/ubl_details_tools.js');
+
+    $obj = islandora_object_load(arg(2));
+    $menu = array();
+
+    $menu['class'] = 'ubl-detail-tools';
+    $buttons = array();
+
+    $units = array( 'bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
+
+    $url = '#';
+    $dsids = ubl_access_rights_from_metadata_downloadable_dsids($obj);
+    $additional = '<DIV class="menu">';
+    $additional .= '<h3>Download</h3>';
+    if (count($dsids) > 0) { 
+      $additional .= '<table><tbody>';
+      foreach ($dsids as $dsid) {
+        $url = url('islandora/object/'.$obj->id.'/datastream/'.$dsid.'/download');
+        $size = $obj[$dsid]->size;
+        $label = $obj[$dsid]->label;
+        $power = $size > 0 ? floor(log($size, 1024)) : 0;
+        $size = number_format($size / pow(1024, $power), ($power > 0)?1:0) . ' ' . $units[$power];
+        $additional .= "<tr data-download=\"$url\"><td>$label</td><td>$size</td></tr>";
+      }
+      $additional .= '</tbody></table>';
+    }
+    else {
+      $additional .= '<DIV>' . t('No downloads accessible.') . '</DIV>';
+    }
+    $access = ubl_access_rights_from_metadata_access_description($obj);
+    $additional .= '<DIV class="access">';
+    $additional .= '<DIV class="text">'.$access['accesstext'].'</DIV>';
+    $additional .= '<a href="'.$access['accesslink'].'" target="_blank">';
+    $additional .= '<img src="'.$access['accessimage'].'">';
+    $additional .= '</a>';
+    $additional .= '</DIV>';
+    $additional .= '</DIV>';
+    $buttons['download'] = array(
+      'label' => 'download',
+      'class' => 'fa-download',
+      'url' => $url,
+      'additional' => $additional,
+    );
+    
+    $menu['buttons'] = $buttons;
+  
+    $block['content']['#markup'] = theme('ubl_detail_tools', $menu);
+  }
+
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ubl_access_rights_from_metadata_theme() {
+  $path = drupal_get_path('module', 'ubl_access_rights_from_metadata');
+
+  return array(
+    'ubl_detail_tools' => array(
+      'path' => $path . '/theme',
+      'template' => 'ubl-detail-tools',
+      'variables' => array('class' => NULL, 'buttons' => array()),
+    ),
+  );
+}
+
+/**
+ * Implements hook_islandora_datastream_modified().
+ **/
+function ubl_access_rights_from_metadata_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+  if ($object && $datastream) {
+    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
+
+    $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $object));
+    if (isset($config['_config']['rightssource']['dsid']) && $datastream->id === $config['_config']['rightssource']['dsid']) {
+      module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/xacml');
+      module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+     
+      // Get the new access rights value and refresh the cache for this object.
+      $accessvalue = ubl_access_rights_from_metadata_get_access_rights_value($object, $config, TRUE);
+      // Set XACML rights according to configuration.
+      ubl_access_rights_from_metadata_xacml_modify_if_needed($object, $config);
+    }
+  }
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function ubl_access_rights_from_metadata_flush_caches() {
+  return array('cache_ubl_access_rights_from_metadata_config','cache_ubl_access_rights_from_metadata_access_rights_value');
+}
