@@ -27,7 +27,7 @@ function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
         $error = "Section '$key' should only contain 'ip_range' keys";
       }
     }
-    elseif (has_prefix($key, 'all:') || has_prefix($key, 'internal:') || has_prefix($key, 'external:')) {
+    elseif (has_prefix($key, 'all::') || has_prefix($key, 'internal::') || has_prefix($key, 'external::')) {
       if (!array($values) || count($values) == 0) {
         $error = "Section '$key' should contain at least 1 key";
       }
@@ -110,7 +110,7 @@ function ubl_access_rights_from_metadata_get_configuration($options) {
             $iniarray = parse_ini_file($filepath, TRUE);
             if ($iniarray) {
               foreach ($iniarray as $k => $v) {
-                $parts = explode(':', $k, 2);
+                $parts = explode('::', $k, 2);
                 if (count($parts) == 2) {
                   list($location,$accessvalue) = $parts;
                   if (!isset($aconfig[$accessvalue])) {
@@ -126,7 +126,11 @@ function ubl_access_rights_from_metadata_get_configuration($options) {
                     $ipranges = array();
                     foreach ($iniarray[$k]['ip_range'] as $iprange) {
                       list($minip, $maxip) = explode('-', $iprange);
-                      $ipranges[] = array('min' => ip2long($minip), 'max' => ip2long($maxip));
+                      $min = ipToHex($minip);
+                      $max = ipToHex($maxip);
+                      if ($min && $max) {
+                        $ipranges[] = array('min' => $min, 'max' => $max);
+                      }
                     }
                     $aconfig['_config'][$k] = array('ip_ranges' => $ipranges);
                   }
@@ -150,7 +154,7 @@ function ubl_access_rights_from_metadata_get_configuration($options) {
   }
   elseif (isset($options['object'])) {
     if (count($config[$configdir]) > 1) {
-      $objconfig = ubl_access_rights_from_metadata_config_for_object($config[$configdir], $options['object']);
+      $objconfig = _ubl_access_rights_from_metadata_config_for_object($config[$configdir], $options['object']);
       if ($objconfig) {
         return $objconfig;
       }
@@ -159,7 +163,28 @@ function ubl_access_rights_from_metadata_get_configuration($options) {
   return $config[$configdir][FALSE];
 }
 
-function ubl_access_rights_from_metadata_config_for_object($config, $obj) {
+function _ubl_access_rights_from_metadata_unfold_dsid_array($cnfg, $key, $obj, $dontmessdsids = array()) {
+  if (!isset($cnfg[$key])) {
+    return array();
+  }
+  $dsids = $cnfg[$key]; 
+  if (in_array('NONE', $dsids)) {
+    return array();
+  }
+  if (in_array('ALL', $dsids)) {
+    $dsids = array();
+    foreach ($obj as $ds) {
+      $dsid = $ds->id;
+      if (!in_array($dsid, $dontmessdsids)) {
+        $dsids[] = $dsid;
+      }
+    }
+  }
+  return $dsids;
+}
+
+
+function _ubl_access_rights_from_metadata_config_for_object($config, $obj) {
   module_load_include('inc', 'islandora', 'includes/utilities');
 
   list ($namespace, $shortpid) = explode(':', $obj->id, 2);
@@ -186,7 +211,7 @@ function ubl_access_rights_from_metadata_config_for_object($config, $obj) {
   $relations = array_filter(array_map($map, $relations));
 
   foreach ($relations as $relation) {
-    $found = ubl_access_rights_from_metadata_config_for_object($config, $relation);
+    $found = _ubl_access_rights_from_metadata_config_for_object($config, $relation);
     if ($found) {
       return $found;
     }
@@ -194,7 +219,28 @@ function ubl_access_rights_from_metadata_config_for_object($config, $obj) {
   return FALSE;
 }
 
-function ubl_access_rights_from_metadata_get_settings($accessrightsvalue, $config) {
+function ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config) {
+  return _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config);
+}
+
+function ubl_access_rights_from_metadata_get_all_access_rights_settings($accessrightsvalue, $config) {
+  $all = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, 'all');
+  $internal = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, 'internal');
+  $external = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, 'external');
+  
+  if (!is_array($all)) {
+    $all = array();
+  }
+  if (!is_array($internal)) {
+    $internal = array();
+  }
+  if (!is_array($external)) {
+    $external = array();
+  }
+  return array_merge($external, $internal, $all);
+}
+
+function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $specifickey = FALSE) {
   $accesssettings = NULL;
   if (isset($config[$accessrightsvalue])) {
     $accesssettings = $config[$accessrightsvalue];
@@ -204,23 +250,53 @@ function ubl_access_rights_from_metadata_get_settings($accessrightsvalue, $confi
       $accesssettings = $config['otherwise'];
     }
   }
-  return $accesssettings;
-}
-
-function _unfold_dsid_array($dsids, $obj, $dontmessdsids = array()) {
-  if (in_array('NONE', $dsids)) {
-    return array();
-  }
-  if (in_array('ALL', $dsids)) {
-    $dsids = array();
-    foreach ($obj as $ds) {
-      $dsid = $ds->id;
-      if (!in_array($dsid, $dontmessdsids)) {
-        $dsids[] = $dsid;
+  if (is_array($accesssettings)) {
+    if ($specifickey) {
+      $accesssettings = isset($accesssettings[$specifickey])?$accesssettings[$specifickey]:NULL;
+    }
+    else {
+      $hasInExternal = FALSE;
+      if (isset($accesssettings['internal']) || isset($accesssettings['external'])) {
+        $isinternal = FALSE;
+        $clientip = ip_address();
+        $clientiphex = ipToHex($clientip);
+        if ($clientiphex) {
+          $ipranges = $config['_config']['internal']['ip_ranges']; 
+            foreach ($ipranges as $iprange) {
+            $min = $iprange['min'];
+            $max = $iprange['max'];
+            if (strcmp($min, $clientiphex) <= 0 && strcmp($clientiphex, $max) <= 0) {
+              $isinternal = TRUE;
+              continue;
+            }
+          }
+        }
+        if ($isinternal) {
+          if (isset($accesssettings['internal'])) {
+            $accesssettings = $accesssettings['internal'];
+            $hasInExternal = TRUE;
+          }
+        }
+        else {
+          if (isset($accesssettings['external'])) {
+            $accesssettings = $accesssettings['external'];
+            $hasInExternal = TRUE;
+          }
+        }
+      }
+      if (!$hasInExternal && isset($accesssettings['all'])) {
+        $accesssettings = $accesssettings['all'];
       }
     }
   }
-  return $dsids;
+  return $accesssettings;
+}
+
+function ubl_access_rights_from_metadata_get_rights_source_settings($config) {
+  if (isset($config['_config']['rightssource'])) {
+    return $config['_config']['rightssource'];
+  }
+  return array();
 }
 
 function has_prefix($str, $prefix) {
@@ -229,4 +305,71 @@ function has_prefix($str, $prefix) {
 
 function has_postfix($str, $postfix) {
   return (substr($str, -strlen($postfix)) === $postfix);
+}
+
+function ipToHex($ipAddress) {
+  // function by johniskew at yahoo dot com.
+  // don't use ip2long because it cannot handle ip v6.
+  $hex = '';
+  if(strpos($ipAddress, ',') !== false) {
+    $splitIp = explode(',', $ipAddress);
+    $ipAddress = trim($splitIp[0]);
+  }
+  $isIpV6 = false;
+  $isIpV4 = false;
+  if(filter_var($ipAddress, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+    $isIpV6 = true;
+  }
+  else if(filter_var($ipAddress, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+    $isIpV4 = true;
+  }
+  if(!$isIpV4 && !$isIpV6) {
+    return false;
+  }
+  // IPv4 format
+  if($isIpV4) {
+    $parts = explode('.', $ipAddress);
+    for($i = 0; $i < 4; $i++) {
+      $parts[$i] = str_pad(dechex($parts[$i]), 2, '0', STR_PAD_LEFT);
+    }
+    $ipAddress = '::'.$parts[0].$parts[1].':'.$parts[2].$parts[3];
+    $hex = join('', $parts);
+  }
+  // IPv6 format
+  else {
+    $parts = explode(':', $ipAddress);
+    // If this is mixed IPv6/IPv4, convert end to IPv6 value
+    if(filter_var($parts[count($parts) - 1], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+      $partsV4 = explode('.', $parts[count($parts) - 1]);
+      for($i = 0; $i < 4; $i++) {
+        $partsV4[$i] = str_pad(dechex($partsV4[$i]), 2, '0', STR_PAD_LEFT);
+      }
+      $parts[count($parts) - 1] = $partsV4[0].$partsV4[1];
+      $parts[] = $partsV4[2].$partsV4[3];
+    }
+    $numMissing = 8 - count($parts);
+    $expandedParts = array();
+    $expansionDone = false;
+    foreach($parts as $part) {
+      if(!$expansionDone && $part == '') {
+        for($i = 0; $i <= $numMissing; $i++) {
+          $expandedParts[] = '0000';
+        }
+        $expansionDone = true;
+      }
+      else {
+        $expandedParts[] = $part;
+      }
+    }
+    foreach($expandedParts as &$part) {
+      $part = str_pad($part, 4, '0', STR_PAD_LEFT);
+    }
+    $ipAddress = join(':', $expandedParts);
+    $hex = join('', $expandedParts);
+  }
+  // Validate the final IP
+  if(!filter_var($ipAddress, FILTER_VALIDATE_IP)) {
+    return false;
+  }
+  return strtolower(str_pad($hex, 32, '0', STR_PAD_LEFT));
 }

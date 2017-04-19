@@ -20,9 +20,6 @@
   margin-top: 0.6em;
   margin-bottom: 0.6em;
 }
-.ubl-detail-tools DIV.additional DIV.menu TABLE {
-  margin-bottom: 1em;
-}
 .ubl-detail-tools DIV.additional DIV.menu TABLE TR {
   cursor: pointer;
 }
@@ -36,6 +33,7 @@
 }
 .ubl-detail-tools DIV.additional DIV.menu DIV.access {
   white-space: nowrap;
+  margin-top: 1em;
   padding-bottom: 1.5em;
 }
 .ubl-detail-tools DIV.additional DIV.menu DIV.access IMG {

@@ -13,29 +13,9 @@ function ubl_access_rights_from_metadata_downloadable_dsids($obj) {
   
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
-  $dsids = array();
-  $specificaccesssettings = array();
-  if (isset($accesssettings['all'])) {
-    $specificaccesssettings = $accesssettings['all'];
-  }
-  else if (isset($accesssettings['external'])) {
-    $specificaccesssettings = $accesssettings['external'];
-  }
-  else if (isset($accesssettings['internal'])) {
-    $specificaccesssettings = $accesssettings['internal'];
-  }
-  if (isset($specificaccesssettings['provide_download_of_dsid'])) {
-    $downloadabledsids = $specificaccesssettings['provide_download_of_dsid'];
-    $downloadabledsids = _unfold_dsid_array($downloadabledsids, $obj, array('RELS-INT','RELS-EXT','POLICY'));
+  $downloadabledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'provide_download_of_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
 
-    foreach ($obj as $ds) {
-      $dsid = $ds->id;
-      if (in_array($dsid, $downloadabledsids)) {
-        $dsids[] = $dsid;
-      }
-    }
-  }
-  return $dsids;
+  return $downloadabledsids;
 }
 
 function ubl_access_rights_from_metadata_access_description($obj) {
@@ -47,28 +27,19 @@ function ubl_access_rights_from_metadata_access_description($obj) {
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
   $result = array();
-  $specificaccesssettings = array();
-  if (isset($accesssettings['all'])) {
-    $specificaccesssettings = $accesssettings['all'];
-  }
-  else if (isset($accesssettings['external'])) {
-    $specificaccesssettings = $accesssettings['external'];
-  }
-  else if (isset($accesssettings['internal'])) {
-    $specificaccesssettings = $accesssettings['internal'];
-  }
-  $result['accesstext'] = isset($specificaccesssettings['access_text'])?$specificaccesssettings['access_text']:'';
-  $result['accesslink'] = isset($specificaccesssettings['access_link'])?$specificaccesssettings['access_link']:'';
-  $result['accessimage'] = isset($specificaccesssettings['access_image'])?$specificaccesssettings['access_image']:'';
+  $result['accesstext'] = isset($accesssettings['access_text'])?$accesssettings['access_text']:'';
+  $result['accesslink'] = isset($accesssettings['access_link'])?$accesssettings['access_link']:'';
+  $result['accessimage'] = isset($accesssettings['access_image'])?$accesssettings['access_image']:'';
 
   return $result;
 }
 
 function ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config) {
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
   $accessvalue = ubl_access_rights_from_metadata_get_access_rights_value($obj, $config);
-  $accesssettings = ubl_access_rights_from_metadata_get_settings($accessvalue, $config);
+  $accesssettings = ubl_access_rights_from_metadata_get_access_rights_settings($accessvalue, $config);
 
   if ($accesssettings === NULL) {
     $part_of = NULL;

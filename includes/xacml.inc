@@ -13,7 +13,7 @@ function ubl_access_rights_from_metadata_xacml_modify_if_needed($obj, $config) {
 
   $accessrightsvalue = ubl_access_rights_from_metadata_get_access_rights_value($obj, $config);
 
-  $accesssettings = ubl_access_rights_from_metadata_get_settings($accessrightsvalue, $config);
+  $accesssettings = ubl_access_rights_from_metadata_get_all_access_rights_settings($accessrightsvalue, $config);
 
   if (isset($accesssettings)) {
     ubl_access_rights_from_metadata_xacml_modify_with_settings($obj, $accesssettings);
@@ -57,35 +57,33 @@ function ubl_access_rights_from_metadata_xacml_modify_with_settings($obj, $acces
   $xacml = NULL;
   $haschanges = FALSE;
 
-  if (isset($accesssettings['all'])) {
-    $denydsids = isset($accesssettings['all']['deny_access_to_dsid'])?$accesssettings['all']['deny_access_to_dsid']:array();
-    $denydsids = _unfold_dsid_array($denydsids, $obj, array('RELS-INT','RELS-EXT','POLICY'));
-    $allowdsids = isset($accesssettings['all']['allow_access_to_dsid'])?$accesssettings['all']['allow_access_to_dsid']:array();
-    $allowdsids = _unfold_dsid_array($allowdsids, $obj);
-    $allowedroles = isset($accesssettings['all']['allow_access_for_role'])?$accesssettings['all']['allow_access_for_role']:array();
+  $denydsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
+  $allowdsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
+  $allowedroles = isset($accesssettings['allow_access_for_role'])?$accesssettings['allow_access_for_role']:array();
 
-    // Remove the allowed dsids from the denied dsids.
-    $denydsids = array_diff($denydsids, $allowdsids);
-  
-    $xacml = new IslandoraXacml($obj);
-    // Alter the denied DSIDs, but first check if a change is needed.
+dpm($denydsids, 'denydsids');
+dpm($allowdsids, 'allowdsids');
+  // Remove the allowed dsids from the denied dsids.
+  $denydsids = array_diff($denydsids, $allowdsids);
+
+  $xacml = new IslandoraXacml($obj);
+  // Alter the denied DSIDs, but first check if a change is needed.
+  $currentdsids = $xacml->datastreamRule->getDsids();
+  if (count(array_diff($denydsids, $currentdsids)) > 0) {
+    $xacml->datastreamRule->addDsid($denydsids);
+    $haschanges = TRUE;
     $currentdsids = $xacml->datastreamRule->getDsids();
-    if (count(array_diff($denydsids, $currentdsids)) > 0) {
-      $xacml->datastreamRule->addDsid($denydsids);
-      $haschanges = TRUE;
-      $currentdsids = $xacml->datastreamRule->getDsids();
-    }
-    // Make sure that the allowed dsids are not in the disallowed datastream rule.
-    if (count(array_intersect($allowdsids, $currentdsids)) > 0) {
-      $xacml->datastreamRule->removeDsid($allowdsids);
-      $haschanges = TRUE;
-    }
-    // Alter the allowed roles, but first check if a change is needed.
-    $currentroles = $xacml->datastreamRule->getRoles();
-    if (count(array_diff($allowedroles, $currentroles)) > 0) {
-      $xacml->datastreamRule->addRole($allowedroles);
-      $haschanges = TRUE;
-    }
+  }
+  // Make sure that the allowed dsids are not in the disallowed datastream rule.
+  if (count(array_intersect($allowdsids, $currentdsids)) > 0) {
+    $xacml->datastreamRule->removeDsid($allowdsids);
+    $haschanges = TRUE;
+  }
+  // Alter the allowed roles, but first check if a change is needed.
+  $currentroles = $xacml->datastreamRule->getRoles();
+  if (count(array_diff($allowedroles, $currentroles)) > 0) {
+    $xacml->datastreamRule->addRole($allowedroles);
+    $haschanges = TRUE;
   }
 
   if ($xacml && $haschanges) {
