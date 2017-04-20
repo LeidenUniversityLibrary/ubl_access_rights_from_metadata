@@ -158,7 +158,7 @@ function ubl_access_rights_from_metadata_get_configuration($options) {
     return $config[$configdir][$type];
   }
   elseif (isset($options['object'])) {
-    if (count($config[$configdir]) > 1) {
+    if (count($config[$configdir]) > 2) {
       $objconfig = _ubl_access_rights_from_metadata_config_for_object($config[$configdir], $options['object']);
       if ($objconfig) {
         return $objconfig;
