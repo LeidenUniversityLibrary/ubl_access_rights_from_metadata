@@ -5,6 +5,53 @@
  * Functions for user interface access rights.
  */
 
+function ubl_access_rights_from_metadata_accessible_dsids($obj) {
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+
+  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  
+  $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
+
+  $accessibledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
+  $denydsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj);
+
+  // remove any occurence of allowed dsids if it is in the deny dsids also.
+  $accessibledsids = array_diff($accessibledsids, $denydsids);
+
+  return $accessibledsids;
+}
+
+function ubl_access_rights_from_metadata_restricted_dsids($obj) {
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+
+  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  
+  $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
+
+  $accessibledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
+  $denydsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj);
+
+  // remove any occurence of deny dsids if it is in the allowed dsids also.
+  $restricteddsids = array_diff($denydsids, $accessibledsids);
+
+  return $restricteddsids;
+}
+
+function ubl_access_rights_from_metadata_allowed_roles($obj) {
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+
+  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  
+  $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
+
+  $allowedroles = $accesssettings['allow_access_for_role'];
+
+  return $allowedroles;
+}
+
 function ubl_access_rights_from_metadata_downloadable_dsids($obj) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');

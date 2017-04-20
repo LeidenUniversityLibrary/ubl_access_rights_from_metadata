@@ -14,7 +14,12 @@ function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
     return FALSE;
   }
   foreach ($accessconfig as $key => $values) {
-    if ($key === 'rightssource') {
+    if ($key === 'general') {
+      if (!is_array($values) || count($values) != 1 || !isset($values['ip_range'])) {
+        $error = "Section '$key' should only contain 'ip_range' keys";
+      }
+    }
+    elseif ($key === 'rightssource') {
       if (!isset($values['dsid'])) {
         $error = "No key 'dsid' found in '$key'";
       }
@@ -122,7 +127,7 @@ function ubl_access_rights_from_metadata_get_configuration($options) {
                   if (!isset($aconfig['_config'])) {
                     $aconfig['_config'] = array();
                   }
-                  if ($k === 'internal') {
+                  if (($k === 'internal' || $k === 'general') && isset($iniarray[$k]['ip_range'])) {
                     $ipranges = array();
                     foreach ($iniarray[$k]['ip_range'] as $iprange) {
                       list($minip, $maxip) = explode('-', $iprange);
@@ -257,20 +262,8 @@ function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrigh
     else {
       $hasInExternal = FALSE;
       if (isset($accesssettings['internal']) || isset($accesssettings['external'])) {
-        $isinternal = FALSE;
-        $clientip = ip_address();
-        $clientiphex = ipToHex($clientip);
-        if ($clientiphex) {
-          $ipranges = $config['_config']['internal']['ip_ranges']; 
-            foreach ($ipranges as $iprange) {
-            $min = $iprange['min'];
-            $max = $iprange['max'];
-            if (strcmp($min, $clientiphex) <= 0 && strcmp($clientiphex, $max) <= 0) {
-              $isinternal = TRUE;
-              continue;
-            }
-          }
-        }
+        $ipranges = $config['_config']['internal']['ip_ranges']; 
+        $isinternal = _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
         if ($isinternal) {
           if (isset($accesssettings['internal'])) {
             $accesssettings = $accesssettings['internal'];
@@ -290,6 +283,29 @@ function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrigh
     }
   }
   return $accesssettings;
+}
+
+function _ubl_access_rights_from_metadata_client_ip_in_range($ipranges) {
+  $isinrange = FALSE;
+  $clientip = ip_address();
+  $clientiphex = ipToHex($clientip);
+  if ($clientiphex) {
+    foreach ($ipranges as $iprange) {
+      $min = $iprange['min'];
+      $max = $iprange['max'];
+      if (strcmp($min, $clientiphex) <= 0 && strcmp($clientiphex, $max) <= 0) {
+        $isinternal = TRUE;
+        continue;
+      }
+    }
+  }
+  return $isinrange;
+}
+
+function ubl_access_rights_from_metadata_is_request_from_server($object) {
+  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $object));
+  $ipranges = $config['_config']['general']['ip_ranges']; 
+  return _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
 }
 
 function ubl_access_rights_from_metadata_get_rights_source_settings($config) {

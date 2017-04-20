@@ -6,7 +6,7 @@
 jQuery(document).ready(function() {
   jQuery('.ubl-detail-tools LI A .fa-download').parent().click(function (e) {
     var $li = jQuery(this).parent();
-    var $additionalblock = $li.next('.additional'); 
+    var $additionalblock = jQuery('DIV.download-additional'); 
     if ($additionalblock.size() > 0) {
       e.preventDefault();
       if ($additionalblock.is(':visible')) {
@@ -22,6 +22,9 @@ jQuery(document).ready(function() {
       if (x > 0) {
         $additionalblock.css('left', x + 'px');
       }
+      var y = $li.offset().top + $li.outerHeight();
+      $additionalblock.css('top', y + 'px');
+
       $additionalblock.slideDown();
       e.stopPropagation();
       jQuery('BODY').one('click', function() {

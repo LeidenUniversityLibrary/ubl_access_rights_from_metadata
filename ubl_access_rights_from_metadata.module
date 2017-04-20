@@ -9,6 +9,7 @@ ini_set("display_errors", 1);
 
 /**
  * Implements hook_detail_tools_block_view().
+ * This hook is used inside the templates to display the detail tools block with buttons.
  */
 function ubl_access_rights_from_metadata_detail_tools_block_view() {
   $block = array();
@@ -21,13 +22,9 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
     drupal_add_js(drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/js/ubl_details_tools.js');
 
     $obj = islandora_object_load(arg(2));
-    $menu = array();
 
-    $menu['class'] = 'ubl-detail-tools';
-    $buttons = array();
-
+    // List of downloadable datastreams.
     $units = array( 'bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-
     $url = '#';
     $dsids = ubl_access_rights_from_metadata_downloadable_dsids($obj);
     $additional = '';
@@ -51,6 +48,8 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
     if (!$hasfiles) {
       $additional .= '<DIV>' . t('No downloads accessible.') . '</DIV>';
     }
+
+    // Describe the access rights.
     $access = ubl_access_rights_from_metadata_access_description($obj);
     $additional .= '<DIV class="access">';
     $additional .= '<DIV class="text">'.$access['accesstext'].'</DIV>';
@@ -59,35 +58,79 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
     $additional .= '</a>';
     $additional .= '</DIV>';
     $additional = '<DIV class="menu">' . $additional . '</DIV>';
-    $buttons['download'] = array(
-      'label' => 'download',
-      'class' => 'fa-download',
-      'url' => $url,
-      'additional' => $additional,
-    );
-    
-    $menu['buttons'] = $buttons;
-  
-    $block['download']['#markup'] = theme('ubl_detail_tools', $menu);
-  }
 
+    $additional = '<DIV class="download-additional">' . $additional . '</DIV>';
+
+    // Put this in a item list.
+    $block['list'] = array(
+      '#type' => 'ul',
+      '#attributes' => array('class' => array('dc-detail-tools', 'ubl-detail-tools')),
+      '#items' => array(
+        array(
+          'data' => l(
+                      '<span>download</span><i class="fa fa-download" aria-hidden="true"></i>',
+                      $url,
+                      array('attributes' => array('title' => 'download'),'html' => TRUE)
+                    ), 
+        ),
+      ),
+      '#theme' => 'item_list',
+    );
+    $block['downloadadditional'] = array(
+      '#type' => 'markup',
+      '#markup' => $additional,
+    );
+  }
   return $block;
 }
 
 /**
- * Implements hook_theme().
- */
-function ubl_access_rights_from_metadata_theme() {
-  $path = drupal_get_path('module', 'ubl_access_rights_from_metadata');
+ * Implements hook_islandora_datastream_access()
+ **/
+function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islandora_datastream, $user) {
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
 
-  return array(
-    'ubl_detail_tools' => array(
-      'path' => $path . '/theme',
-      'template' => 'ubl-detail-tools',
-      'variables' => array('class' => NULL, 'buttons' => array()),
-    ),
-  );
+  $obj = $islandora_datastream->parent;
+  $dsid = $islandora_datastream->id;
+
+  if (ubl_access_rights_from_metadata_is_request_from_server($obj)) {
+    // this is a request from an Islandora server, so let someone else handle the access.
+    return NULL;
+  }
+
+  // First check if user is allowed access.
+  $allowedroles = ubl_access_rights_from_metadata_allowed_roles($obj);
+  if ($allowedroles && is_array($allowedroles)) {
+    foreach ($allowedroles as $allowedrole) {
+      $role = user_role_load_by_name($allowedrole);
+      if ($role) {
+        if (user_has_role($role->rid, $user)) {
+          // User has access, but let someone else figure out exactly how much.
+          return NULL;
+        }
+      }
+    }
+  }
+
+  // Check if the datastream is restricted.
+  $restricted = ubl_access_rights_from_metadata_restricted_dsids($obj);
+  if (in_array($dsid, $restricted)) {
+    // This datastream is restricted and cannot be accessed.
+    return FALSE;
+  }
+  
+  // Check if the datastream is allowed.
+  $allowed = ubl_access_rights_from_metadata_accessible_dsids($obj); 
+  if (in_array($dsid, $allowed)) {
+    // This datastream is allowed and can be accessed.
+    return TRUE;
+  }
+
+  // We don't know if this datastream is allowed or restricted, so let someone else handle it.
+  return NULL;
 }
+
 
 /**
  * Implements hook_islandora_datastream_modified().

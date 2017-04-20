@@ -1,4 +1,7 @@
-.ubl-detail-tools DIV.additional {
+.item-list UL.ubl-detail-tools LI {
+  margin: 0;
+}
+DIV.download-additional {
   display: none;
   padding: 5px;
   position: absolute;
@@ -10,41 +13,41 @@
   -webkit-border-radius: 3px;
   border-radius: 3px;
 }
-.ubl-detail-tools DIV.additional DIV.menu {
+DIV.download-additional DIV.menu {
   padding: 0 10px 0 20px;
   margin-bottom: 30px;
   color:white;
 }
-.ubl-detail-tools DIV.additional DIV.menu H3 {
+DIV.download-additional DIV.menu H3 {
   color: white;
   margin-top: 0.6em;
   margin-bottom: 0.6em;
 }
-.ubl-detail-tools DIV.additional DIV.menu TABLE TR {
+DIV.download-additional DIV.menu TABLE TR {
   cursor: pointer;
 }
-.ubl-detail-tools DIV.additional DIV.menu TABLE TR TD:first-child {
+DIV.download-additional DIV.menu TABLE TR TD:first-child {
   white-space: nowrap;
   width: 60%;
 }
-.ubl-detail-tools DIV.additional DIV.menu TABLE TR TD:last-child {
+DIV.download-additional DIV.menu TABLE TR TD:last-child {
   text-align: right;
   font-size: 75%;
 }
-.ubl-detail-tools DIV.additional DIV.menu DIV.access {
+DIV.download-additional DIV.menu DIV.access {
   white-space: nowrap;
   margin-top: 1em;
   padding-bottom: 1.5em;
 }
-.ubl-detail-tools DIV.additional DIV.menu DIV.access IMG {
+DIV.download-additional DIV.menu DIV.access IMG {
   height: 35px;
   float: left;
   padding:0;
 }
-.ubl-detail-tools DIV.additional DIV.menu DIV.access A {
+DIV.download-additional DIV.menu DIV.access A {
   padding:0;
 }
-.ubl-detail-tools DIV.additional DIV.menu DIV.access DIV.text {
+DIV.download-additional DIV.menu DIV.access DIV.text {
   float: right;
   margin-top: 5px;
   margin-bottom: 5px;

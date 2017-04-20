@@ -61,8 +61,6 @@ function ubl_access_rights_from_metadata_xacml_modify_with_settings($obj, $acces
   $allowdsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
   $allowedroles = isset($accesssettings['allow_access_for_role'])?$accesssettings['allow_access_for_role']:array();
 
-dpm($denydsids, 'denydsids');
-dpm($allowdsids, 'allowdsids');
   // Remove the allowed dsids from the denied dsids.
   $denydsids = array_diff($denydsids, $allowdsids);
 
