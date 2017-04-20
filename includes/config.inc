@@ -294,7 +294,7 @@ function _ubl_access_rights_from_metadata_client_ip_in_range($ipranges) {
       $min = $iprange['min'];
       $max = $iprange['max'];
       if (strcmp($min, $clientiphex) <= 0 && strcmp($clientiphex, $max) <= 0) {
-        $isinternal = TRUE;
+        $isinrange = TRUE;
         continue;
       }
     }
