@@ -23,14 +23,14 @@ DIV.download-additional DIV.menu H3 {
   margin-top: 0.6em;
   margin-bottom: 0.6em;
 }
-DIV.download-additional DIV.menu TABLE TR {
+DIV.download-additional DIV.menu TABLE.download TR {
   cursor: pointer;
 }
-DIV.download-additional DIV.menu TABLE TR TD:first-child {
+DIV.download-additional DIV.menu TABLE.download TR TD:first-child {
   white-space: nowrap;
   width: 60%;
 }
-DIV.download-additional DIV.menu TABLE TR TD:last-child {
+DIV.download-additional DIV.menu TABLE.download TR TD:last-child {
   text-align: right;
   font-size: 75%;
 }
@@ -39,16 +39,13 @@ DIV.download-additional DIV.menu DIV.access {
   margin-top: 1em;
   padding-bottom: 1.5em;
 }
-DIV.download-additional DIV.menu DIV.access IMG {
+DIV.download-additional DIV.menu TABLE.access IMG {
   height: 35px;
-  float: left;
   padding:0;
 }
-DIV.download-additional DIV.menu DIV.access A {
-  padding:0;
+DIV.download-additional DIV.menu TABLE.access {
+  margin-top: 2em;
 }
-DIV.download-additional DIV.menu DIV.access DIV.text {
-  float: right;
-  margin-top: 5px;
-  margin-bottom: 5px;
-}
+DIV.download-additional DIV.menu TABLE.access TH {
+  font-weight: bold;
+  padding-top: 1em;

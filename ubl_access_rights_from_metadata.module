@@ -31,7 +31,7 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
     $hasfiles = FALSE;
     $additional .= '<h3>Download</h3>';
     if (count($dsids) > 0) { 
-      $additional .= '<table><tbody>';
+      $additional .= '<table class="download"><tbody>';
       foreach ($dsids as $dsid) {
         if (isset($obj[$dsid])) {
           $hasfiles = TRUE;
@@ -51,12 +51,29 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
 
     // Describe the access rights.
     $access = ubl_access_rights_from_metadata_access_description($obj);
-    $additional .= '<DIV class="access">';
-    $additional .= '<DIV class="text">'.$access['accesstext'].'</DIV>';
-    $additional .= '<a href="'.$access['accesslink'].'" target="_blank">';
-    $additional .= '<img src="'.$access['accessimage'].'">';
-    $additional .= '</a>';
-    $additional .= '</DIV>';
+    if ($access && count($access) > 0) {
+      $additional .= '<TABLE class="access">';
+      $additional .= '<TBODY>';
+      if (isset($access['accesstext']) && strlen($access['accesstext']) > 0) { 
+        $additional .= '<TR><TH>'.t('Restriction on access').'</TH></TR><TR><TD class="text">'.$access['accesstext'].'</TD></TR>';
+      }
+      if ((isset($access['accessimage']) && strlen($access['accessimage']) > 0) || (isset($access['accessusetext']) && strlen($access['accessusetext']) > 0)) { 
+        $additional .= '<TR><TH>'.t('Use and reproduction').'</TH></TR><TR>';
+        $additional .= '<TD class="text">';
+        if (isset($access['accessusetext'])) {
+          $additional .= $access['accessusetext'];
+        }
+        if (isset($access['accesslink']) && strlen($access['accesslink']) > 0) {
+          $additional .= '<a href="'.$access['accesslink'].'" target="_blank">';
+        }
+        $additional .= '<img src="'.$access['accessimage'].'">';
+        if (isset($access['accesslink'])) {
+          $additional .= '</a>';
+        }
+        $additional .= '</TD></TR>';
+      }
+      $additional .= '</TBODY></TABLE>';
+    }
     $additional = '<DIV class="menu">' . $additional . '</DIV>';
 
     $additional = '<DIV class="download-additional">' . $additional . '</DIV>';

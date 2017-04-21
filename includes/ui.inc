@@ -75,6 +75,7 @@ function ubl_access_rights_from_metadata_access_description($obj) {
 
   $result = array();
   $result['accesstext'] = isset($accesssettings['access_text'])?$accesssettings['access_text']:'';
+  $result['accessusetext'] = isset($accesssettings['access_usetext'])?$accesssettings['access_usetext']:'';
   $result['accesslink'] = isset($accesssettings['access_link'])?$accesssettings['access_link']:'';
   $result['accessimage'] = isset($accesssettings['access_image'])?$accesssettings['access_image']:'';
 
