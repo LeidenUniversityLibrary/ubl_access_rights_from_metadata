@@ -49,3 +49,8 @@ DIV.download-additional DIV.menu TABLE.access {
 DIV.download-additional DIV.menu TABLE.access TH {
   font-weight: bold;
   padding-top: 1em;
+  border-bottom: none;
+}
+DIV.download-additional DIV.menu TABLE TBODY {
+  border-top: none;
+}
