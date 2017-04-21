@@ -39,7 +39,7 @@ DIV.download-additional DIV.menu DIV.access {
   margin-top: 1em;
   padding-bottom: 1.5em;
 }
-DIV.download-additional DIV.menu TABLE.access IMG {
+IMG.accessimage {
   height: 35px;
   padding:0;
 }

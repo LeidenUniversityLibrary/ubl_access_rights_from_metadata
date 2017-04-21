@@ -4,9 +4,23 @@
  */
 
 jQuery(document).ready(function() {
+  var $additionalblock = jQuery('DIV.download-additional'); 
+  if (jQuery('.dc-box .dc-metadata .islandora-metadata-fields').size() > 0) {
+    var $metadataTable = jQuery('.dc-box .dc-metadata .islandora-metadata-fields');
+    var accesstitle = $additionalblock.find('.accesstitle').html();
+    var accesscontent = $additionalblock.find('.accesscontent').html();
+    var usetitle = $additionalblock.find('.usetitle').html();
+    var usecontent = $additionalblock.find('.usecontent').html();
+
+    if (accesstitle.length > 0) {
+      $metadataTable.find('TBODY').append('<TR><TH>' + accesstitle + '</TH><TD>' + accesscontent + '</TD></TR>'); 
+    }
+    if (usetitle.length > 0) {
+      $metadataTable.find('TBODY').append('<TR><TH>' + usetitle + '</TH><TD>' + usecontent + '</TD></TR>'); 
+    }
+  } 
   jQuery('.ubl-detail-tools LI A .fa-download').parent().click(function (e) {
     var $li = jQuery(this).parent();
-    var $additionalblock = jQuery('DIV.download-additional'); 
     if ($additionalblock.size() > 0) {
       e.preventDefault();
       if ($additionalblock.is(':visible')) {
