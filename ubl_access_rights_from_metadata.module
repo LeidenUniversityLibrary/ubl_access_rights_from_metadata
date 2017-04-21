@@ -25,7 +25,7 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
 
     // List of downloadable datastreams.
     $units = array( 'bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-    $url = '#';
+    $url = current_path();
     $dsids = ubl_access_rights_from_metadata_downloadable_dsids($obj);
     $additional = '';
     $hasfiles = FALSE;

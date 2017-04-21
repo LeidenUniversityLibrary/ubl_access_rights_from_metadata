@@ -12,10 +12,10 @@ jQuery(document).ready(function() {
     var usetitle = $additionalblock.find('.usetitle').html();
     var usecontent = $additionalblock.find('.usecontent').html();
 
-    if (accesstitle.length > 0) {
+    if (typeof accesstitle === 'string' && accesstitle.length > 0) {
       $metadataTable.find('TBODY').append('<TR><TH>' + accesstitle + '</TH><TD>' + accesscontent + '</TD></TR>'); 
     }
-    if (usetitle.length > 0) {
+    if (typeof usetitle === 'string' && usetitle.length > 0) {
       $metadataTable.find('TBODY').append('<TR><TH>' + usetitle + '</TH><TD>' + usecontent + '</TD></TR>'); 
     }
   } 

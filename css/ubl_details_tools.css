@@ -54,3 +54,6 @@ DIV.download-additional DIV.menu TABLE.access TH {
 DIV.download-additional DIV.menu TABLE TBODY {
   border-top: none;
 }
+.dc-sidebox .dc-detail-tools A.active {
+  color: lightgray;
+}
