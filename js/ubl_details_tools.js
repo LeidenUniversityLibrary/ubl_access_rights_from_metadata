@@ -29,7 +29,9 @@ jQuery(document).ready(function() {
       $additionalblock.find('TR').each(function() {
         var downloadurl = jQuery(this).data('download');
         jQuery(this).click(function (e) {
-          document.location = downloadurl;
+          if (downloadurl) {
+            document.location = downloadurl;
+          }
         });
       });
       var x = $li.offset().left - $additionalblock.outerWidth() + $li.outerWidth();
