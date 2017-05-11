@@ -47,12 +47,12 @@ function ubl_access_rights_from_metadata_allowed_roles($obj) {
   
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
-  $allowedroles = $accesssettings['allow_access_for_role'];
+  $allowedroles = isset($accesssettings['allow_access_for_role'])?$accesssettings['allow_access_for_role']:array();
 
   return $allowedroles;
 }
 
-function ubl_access_rights_from_metadata_downloadable_dsids($obj) {
+function ubl_access_rights_from_metadata_downloadable_dsids_with_label($obj) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
@@ -62,7 +62,27 @@ function ubl_access_rights_from_metadata_downloadable_dsids($obj) {
 
   $downloadabledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'provide_download_of_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
 
-  return $downloadabledsids;
+  $result = array();
+  $dsid2label = isset($config['_config']['general']['dsid2label'])?$config['_config']['general']['dsid2label']:array();
+  foreach ($downloadabledsids as $downloadabledsid) {
+    $label = NULL;
+    if (isset($dsid2label[$downloadabledsid])) {
+      $label = $dsid2label[$downloadabledsid];
+      if (isset($obj[$downloadabledsid])) {
+        $label = str_replace("{dsid}", $downloadabledsid, $label);
+        $label = str_replace("{mime}", $obj[$downloadabledsid]->mimeType, $label);
+        $label = str_replace("{label}", $obj[$downloadabledsid]->label, $label);
+      }
+    }
+    else if (isset($obj[$downloadabledsid])) {
+      $label = $obj[$downloadabledsid]->label;
+    }
+    if (isset($label)) {
+      $result[$downloadabledsid] = $label;
+    }
+  }
+
+  return $result;
 }
 
 function ubl_access_rights_from_metadata_access_description($obj) {

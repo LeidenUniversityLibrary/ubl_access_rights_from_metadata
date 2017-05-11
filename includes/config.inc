@@ -15,8 +15,8 @@ function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
   }
   foreach ($accessconfig as $key => $values) {
     if ($key === 'general') {
-      if (!is_array($values) || count($values) != 1 || !isset($values['ip_range'])) {
-        $error = "Section '$key' should only contain 'ip_range' keys";
+      if (!isset($values['ip_range'])) {
+        $error = "Section '$key' should contain 'ip_range' keys";
       }
     }
     elseif ($key === 'rightssource') {
@@ -127,17 +127,24 @@ function ubl_access_rights_from_metadata_get_configuration($options) {
                   if (!isset($aconfig['_config'])) {
                     $aconfig['_config'] = array();
                   }
-                  if (($k === 'internal' || $k === 'general') && isset($iniarray[$k]['ip_range'])) {
-                    $ipranges = array();
-                    foreach ($iniarray[$k]['ip_range'] as $iprange) {
-                      list($minip, $maxip) = explode('-', $iprange);
-                      $min = ipToHex($minip);
-                      $max = ipToHex($maxip);
-                      if ($min && $max) {
-                        $ipranges[] = array('min' => $min, 'max' => $max);
+                  if ($k === 'internal' || $k === 'general') {
+                    foreach ($iniarray[$k] as $sk => $sv) {
+                      if ($sk === 'ip_range') {
+                        $ipranges = array();
+                        foreach ($iniarray[$k]['ip_range'] as $iprange) {
+                          list($minip, $maxip) = explode('-', $iprange);
+                          $min = ipToHex($minip);
+                          $max = ipToHex($maxip);
+                          if ($min && $max) {
+                            $ipranges[] = array('min' => $min, 'max' => $max);
+                          }
+                        }
+                        $aconfig['_config'][$k]['ip_ranges'] = $ipranges;
+                      }
+                      else {
+                        $aconfig['_config'][$k][$sk] = $sv;
                       }
                     }
-                    $aconfig['_config'][$k] = array('ip_ranges' => $ipranges);
                   }
                   else {
                     $aconfig['_config'][$k] = $v;
