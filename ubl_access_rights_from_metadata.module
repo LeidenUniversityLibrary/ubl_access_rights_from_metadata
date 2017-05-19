@@ -1,11 +1,43 @@
 <?php
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
 
 /**
  * @file
  * ubl_access_rights_from_metadata
  */
+
+
+// Permissions.
+define('UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN', 'Access rights from metadata admin');
+
+
+/**
+ * Implements hook_menu().
+ */
+function ubl_access_rights_from_metadata_menu() {
+  $items = array();
+  $items['admin/islandora/tools/ubl_access_rights_from_metadata'] = array(
+    'title' => 'UBL Access rights from metadata',
+    'description' => 'The location of the configuration for UBL Access rights from metadata.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ubl_access_rights_from_metadata_admin_form'),
+    'access arguments' => array(UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN),
+    'file' => 'includes/admin.form.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function ubl_access_rights_from_metadata_permission() {
+  return array(
+    UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN => array(
+      'title' => t('Access rights from metadata admin'),
+      'description' => t('Access rights from metadata admin'),
+    ),
+  );
+}
+
 
 /**
  * Implements hook_detail_tools_block_view().
@@ -14,9 +46,14 @@ ini_set("display_errors", 1);
 function ubl_access_rights_from_metadata_detail_tools_block_view() {
   $block = array();
 
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  if (!$configlocation) {
+    return $block;
+  }
+
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
-  
+
   if (arg(1) == 'object' && islandora_is_valid_pid(arg(2))) {
     drupal_add_css(drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/css/ubl_details_tools.css');
     drupal_add_js(drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/js/ubl_details_tools.js');
@@ -105,6 +142,12 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
  * Implements hook_islandora_datastream_access()
  **/
 function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islandora_datastream, $user) {
+
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  if (!$configlocation) {
+    return NULL;
+  }
+
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
 
@@ -154,9 +197,14 @@ function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islan
  **/
 function ubl_access_rights_from_metadata_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
   if ($object && $datastream) {
+    $configlocation = variable_get('ubl_access_rights_from_metadata_config_location'); 
+    if (!$configlocation) {
+      return;
+    }
+
     module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
 
-    $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $object));
+    $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
     if (isset($config['_config']['rightssource']['dsid']) && $datastream->id === $config['_config']['rightssource']['dsid']) {
       module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/xacml');
       module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
@@ -172,4 +220,40 @@ function ubl_access_rights_from_metadata_islandora_datastream_modified(AbstractO
  */
 function ubl_access_rights_from_metadata_flush_caches() {
   return array('cache_ubl_access_rights_from_metadata_config','cache_ubl_access_rights_from_metadata_access_rights_value');
+}
+
+/**
+ * Implements hook_boot().
+ */
+function ubl_access_rights_from_metadata_boot() {
+  // disable caching for islandora objects
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+  
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location'); 
+  if (!$configlocation) {
+    return;
+  }
+
+  $islandora_object_prefix = 'islandora/object/';
+  $strlen_islandora_object_prefix = strlen($islandora_object_prefix);
+  if (substr(current_path(), 0, $strlen_islandora_object_prefix) === $islandora_object_prefix) {
+    list($objectid) = explode("/", substr(current_path(), $strlen_islandora_object_prefix));
+    if (islandora_is_valid_pid($objectid)) {
+      module_load_include('inc', 'islandora', 'includes/utilities');
+      $object = islandora_object_load($objectid);
+      if ($object) {
+        module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
+        module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+
+        $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
+        $accessvalue = ubl_access_rights_from_metadata_get_access_rights_value($object, $config);
+
+        if ($accessvalue) {
+          if (ubl_access_rights_from_metadata_is_ip_dependent($accessvalue, $config)) {
+            drupal_page_is_cacheable(FALSE);
+          }
+        }
+      }
+    }
+  }
 }

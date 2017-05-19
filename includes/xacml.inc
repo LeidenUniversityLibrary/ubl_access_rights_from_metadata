@@ -1,6 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
 
 /**
  * @file
@@ -13,7 +11,7 @@ function ubl_access_rights_from_metadata_xacml_modify_if_needed($obj, $config) {
 
   $accessrightsvalue = ubl_access_rights_from_metadata_get_access_rights_value($obj, $config);
 
-  $accesssettings = ubl_access_rights_from_metadata_get_all_access_rights_settings($accessrightsvalue, $config);
+  $accesssettings = ubl_access_rights_from_metadata_get_all_access_rights_settings($accessrightsvalue, $config, TRUE, array('deny_access_to_dsid', 'allow_access_to_dsid', 'allow_access_for_role'));
 
   if (isset($accesssettings)) {
     ubl_access_rights_from_metadata_xacml_modify_with_settings($obj, $accesssettings);

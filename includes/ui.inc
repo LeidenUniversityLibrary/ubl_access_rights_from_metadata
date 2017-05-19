@@ -9,7 +9,8 @@ function ubl_access_rights_from_metadata_accessible_dsids($obj) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
-  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
@@ -26,7 +27,8 @@ function ubl_access_rights_from_metadata_restricted_dsids($obj) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
-  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
@@ -43,7 +45,8 @@ function ubl_access_rights_from_metadata_allowed_roles($obj) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
-  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
@@ -56,7 +59,8 @@ function ubl_access_rights_from_metadata_downloadable_dsids_with_label($obj) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
-  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
@@ -89,7 +93,8 @@ function ubl_access_rights_from_metadata_access_description($obj) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
-  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $obj));
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config);
 
@@ -107,10 +112,10 @@ function ubl_access_rights_from_metadata_get_access_settings_from_object_or_pare
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
   $accessvalue = ubl_access_rights_from_metadata_get_access_rights_value($obj, $config);
-  $accesssettings = ubl_access_rights_from_metadata_get_access_rights_settings($accessvalue, $config);
+  $accesssettings = ubl_access_rights_from_metadata_get_access_rights_settings($accessvalue, $config, FALSE);
 
+  $part_of = NULL;
   if ($accesssettings === NULL) {
-    $part_of = NULL;
     // Book page?
     $part_of = $obj->relationships->get(ISLANDORA_RELS_EXT_URI, 'isPageOf');
     // Other member?
@@ -130,11 +135,15 @@ function ubl_access_rights_from_metadata_get_access_settings_from_object_or_pare
         if ($pobj) {
           $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($pobj, $config);
           if ($accesssettings !== NULL) {
-            return $accesssettings; 
+            break; 
           }
         }
       }
     }
+  }
+  $neededkeys = array('provide_download_of_dsid','accesstext','accessusetext','accesslink','accessimage');
+  if (($accesssettings === NULL) || !ubl_access_rights_from_metadata_settings_has_any_needed_keys($accesssettings, $neededkeys)) {
+    $accesssettings = ubl_access_rights_from_metadata_get_access_rights_settings($accessvalue, $config, TRUE, $neededkeys);
   }
 
   return $accesssettings;

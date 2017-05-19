@@ -7,12 +7,24 @@
 
 function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
   $error = '';
-  $accessconfig = parse_ini_file($inifile, TRUE);
+  $inicontent = @file_get_contents($inifile);
 
-  if ($accessconfig === FALSE || !is_array($accessconfig)) {
-    $error = "Error parsing file '$inifile'.";
+  if (($inicontent === FALSE) || (strlen($inicontent) == 0)) {
+    $error = "Error reading file '$inifile'.";
     return FALSE;
   }
+
+  $accessconfig = parse_ini_string($inicontent, TRUE);
+
+  if ($accessconfig === FALSE || !is_array($accessconfig)) {
+    $error = "Error parsing file '$inifile': not an ini file.";
+    return FALSE;
+  }
+  if (!array_key_exists('rightssource', $accessconfig) || !is_array($accessconfig['rightssource'])) {
+    $error = "Error parsing file '$inifile': missing mandatory section 'rightssource'.";
+    return FALSE;
+  }
+  $hasrightsvaluesection = FALSE;
   foreach ($accessconfig as $key => $values) {
     if ($key === 'general') {
       if (!isset($values['ip_range'])) {
@@ -33,6 +45,7 @@ function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
       }
     }
     elseif (has_prefix($key, 'all::') || has_prefix($key, 'internal::') || has_prefix($key, 'external::')) {
+      $hasrightsvaluesection = TRUE; 
       if (!array($values) || count($values) == 0) {
         $error = "Section '$key' should contain at least 1 key";
       }
@@ -50,129 +63,94 @@ function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
     if ($error) {
       return FALSE;
     }
-  } 
-
-  return TRUE;
-}
-
-function ubl_access_rights_from_metadata_valid_config_directory($configdir, &$error) {
-  $accessprefix = 'access_rights';
-  $accesspostfix = '.ini';
-  if ($dh = @opendir($configdir)) {
-    $foundaccessini = FALSE;
-    $accessini = $accessprefix . $accesspostfix;
-    while (FALSE !== ($filename = readdir($dh))) {
-      if (has_prefix($filename, $accessprefix) && has_postfix($filename, $accesspostfix)) {
-        $filepath = $configdir . DIRECTORY_SEPARATOR . $filename;
-        $valid = ubl_access_rights_from_metadata_valid_config_file($filepath, $error);
-        if (!$valid) {
-          return FALSE;
-        }
-        if ($filename === $accessini) {
-          $foundaccessini = TRUE;
-        }
-      }
-    }
-    if (!$foundaccessini) {
-      $error = "No mandatory file '$accessini' found in directory '$configdir'";
-      return FALSE;
-    }
   }
-  else {
-    $error = "Cannot open directory '$configdir'";
+  if (!$hasrightsvaluesection) {
+    $error = "Error parsing file '$inifile': missing a rights value section.";
     return FALSE;
   }
+
   return TRUE;
 }
 
-function ubl_access_rights_from_metadata_get_configuration($options) {
+function ubl_access_rights_from_metadata_get_configuration($configlocation) {
   $config = &drupal_static(__FUNCTION__);
-  if (isset($options['directory'])) {
-    $configdir = $options['directory'];
-  }
-  else {
-    $configdir = drupal_realpath("public://ubl_access_rights_from_metadata");
-  }
-  if (!isset($config[$configdir])) {
-    $stat = stat($configdir);
-    $cachename = $configdir;
+
+  if (!isset($config[$configlocation])) {
+    $cachename = $configlocation;
     $cachebin = 'cache_ubl_access_rights_from_metadata_config';
     if ($cache = cache_get($cachename, $cachebin)) {
       $data = $cache->data;
-      if ($data['_moddate_'] === $stat['mtime']) {
-        $config[$configdir] = $cache->data;
-      }
-    }
-    if (!isset($config[$configdir])) {
-      $config[$configdir] = array('_moddate_' => $stat['mtime']);
-      if ($dh = @opendir($configdir)) {
-        $accessprefix = 'access_rights';
-        $accesspostfix = '.ini';
-        while (FALSE !== ($filename = readdir($dh))) {
-          if (has_prefix($filename, $accessprefix) && has_postfix($filename, $accesspostfix)) {
-            $filepath = $configdir . DIRECTORY_SEPARATOR . $filename;
-            $aconfig = array();
-            $iniarray = parse_ini_file($filepath, TRUE);
-            if ($iniarray) {
-              foreach ($iniarray as $k => $v) {
-                $parts = explode('::', $k, 2);
-                if (count($parts) == 2) {
-                  list($location,$accessvalue) = $parts;
-                  if (!isset($aconfig[$accessvalue])) {
-                    $aconfig[$accessvalue] = array(); 
-                  }
-                  $aconfig[$accessvalue][$location] = $v;
-                }
-                else {
-                  if (!isset($aconfig['_config'])) {
-                    $aconfig['_config'] = array();
-                  }
-                  if ($k === 'internal' || $k === 'general') {
-                    foreach ($iniarray[$k] as $sk => $sv) {
-                      if ($sk === 'ip_range') {
-                        $ipranges = array();
-                        foreach ($iniarray[$k]['ip_range'] as $iprange) {
-                          list($minip, $maxip) = explode('-', $iprange);
-                          $min = ipToHex($minip);
-                          $max = ipToHex($maxip);
-                          if ($min && $max) {
-                            $ipranges[] = array('min' => $min, 'max' => $max);
-                          }
-                        }
-                        $aconfig['_config'][$k]['ip_ranges'] = $ipranges;
-                      }
-                      else {
-                        $aconfig['_config'][$k][$sk] = $sv;
-                      }
-                    }
-                  }
-                  else {
-                    $aconfig['_config'][$k] = $v;
-                  }
-                }
-              } 
-            }
-            $type = substr($filename, strlen($accessprefix) + 1, -strlen($accesspostfix));
-            $config[$configdir][$type] = $aconfig;
-          }
+      if (is_file($configlocation)) {
+        $stat = stat($configlocation);
+        if ($data['_moddate_'] === $stat['mtime']) {
+          $config[$configlocation] = $data;
         }
       }
-      cache_set($cachename, $config[$configdir], $cachebin);
-    }
-  }
-  if (isset($options['file'])) {
-    $type = substr($options['file'], strlen($accessprefix) + 1, -strlen($accesspostfix));
-    return $config[$configdir][$type];
-  }
-  elseif (isset($options['object'])) {
-    if (count($config[$configdir]) > 2) {
-      $objconfig = _ubl_access_rights_from_metadata_config_for_object($config[$configdir], $options['object']);
-      if ($objconfig) {
-        return $objconfig;
+      else {
+        $config[$configlocation] = $data;
       }
     }
+    if (!isset($config[$configlocation])) {
+      if (is_file($configlocation)) {
+        $stat = stat($configlocation);
+        $config[$configlocation] = array('_moddate_' => $stat['mtime']);
+      }
+      $inicontent = @file_get_contents($configlocation);
+      $aconfig = array();
+      if ($inicontent !== FALSE) {
+        $iniarray = parse_ini_string($inicontent, TRUE);
+        if ($iniarray) {
+          foreach ($iniarray as $k => $v) {
+            $parts = explode('::', $k, 2);
+            if (count($parts) == 2) {
+              list($location,$accessvalue) = $parts;
+              if (!isset($aconfig[$accessvalue])) {
+                $aconfig[$accessvalue] = array(); 
+              }
+              $aconfig[$accessvalue][$location] = $v;
+            }
+            else {
+              if (!isset($aconfig['_config'])) {
+                $aconfig['_config'] = array();
+              }
+              if ($k === 'internal' || $k === 'general') {
+                foreach ($iniarray[$k] as $sk => $sv) {
+                  if ($sk === 'ip_range') {
+                    $ipranges = array();
+                    foreach ($iniarray[$k]['ip_range'] as $iprange) {
+                      list($minip, $maxip) = explode('-', $iprange);
+                      $min = ipToHex($minip);
+                      $max = ipToHex($maxip);
+                      if ($min && $max) {
+                        $ipranges[] = array('min' => $min, 'max' => $max);
+                      }
+                    }
+                    $aconfig['_config'][$k]['ip_ranges'] = $ipranges;
+                  }
+                  else {
+                    $aconfig['_config'][$k][$sk] = $sv;
+                  }
+                }
+              }
+              else {
+                $aconfig['_config'][$k] = $v;
+              }
+            }
+          } 
+        }
+      }
+      $config[$configlocation] = $aconfig;
+      $expire_after = time() + (60*60*24); // keep in cache for about a day.
+      cache_set($cachename, $config[$configlocation], $cachebin, $expire_after);
+    }
   }
-  return $config[$configdir][FALSE];
+  return $config[$configlocation];
+}
+
+function ubl_access_rights_from_metadata_refresh_configuration($configlocation) {
+  $cachename = $configlocation;
+  $cachebin = 'cache_ubl_access_rights_from_metadata_config';
+  cache_clear_all($cachename, $cachebin); 
 }
 
 function _ubl_access_rights_from_metadata_unfold_dsid_array($cnfg, $key, $obj, $dontmessdsids = array()) {
@@ -195,50 +173,14 @@ function _ubl_access_rights_from_metadata_unfold_dsid_array($cnfg, $key, $obj, $
   return $dsids;
 }
 
-
-function _ubl_access_rights_from_metadata_config_for_object($config, $obj) {
-  module_load_include('inc', 'islandora', 'includes/utilities');
-
-  list ($namespace, $shortpid) = explode(':', $obj->id, 2);
-  if (isset($config[$namespace . '_' . $shortpid])) {
-    return $config[$namespace . '_' . $shortpid];
-  }
-  elseif (isset($config[$namespace])) {
-    return $config[$namespace];
-  }
-
-  try {
-    $relations = array_merge(
-      $obj->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection'),
-      $obj->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf'),
-      $obj->relationships->get(FEDORA_RELS_EXT_URI, 'isConstituentOf'));
-  }
-  catch (RepositoryException $e) {
-    // @todo some logging would be nice, not sure what this throws.
-    return FALSE;
-  }
-  $map = function($o) {
-    return islandora_object_load($o['object']['value']);
-  };
-  $relations = array_filter(array_map($map, $relations));
-
-  foreach ($relations as $relation) {
-    $found = _ubl_access_rights_from_metadata_config_for_object($config, $relation);
-    if ($found) {
-      return $found;
-    }
-  }
-  return FALSE;
+function ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys = NULL) {
+  return _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys);
 }
 
-function ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config) {
-  return _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config);
-}
-
-function ubl_access_rights_from_metadata_get_all_access_rights_settings($accessrightsvalue, $config) {
-  $all = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, 'all');
-  $internal = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, 'internal');
-  $external = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, 'external');
+function ubl_access_rights_from_metadata_get_all_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys = NULL) {
+  $all = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys, 'all');
+  $internal = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys, 'internal');
+  $external = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys, 'external');
   
   if (!is_array($all)) {
     $all = array();
@@ -252,13 +194,18 @@ function ubl_access_rights_from_metadata_get_all_access_rights_settings($accessr
   return array_merge($external, $internal, $all);
 }
 
-function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $specifickey = FALSE) {
+function ubl_access_rights_from_metadata_is_ip_dependent($accessrightsvalue, $config) {
+  $internal = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, TRUE, NULL, 'internal');
+  return (is_array($internal));
+}
+
+function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys = NULL, $specifickey = FALSE) {
   $accesssettings = NULL;
   if (isset($config[$accessrightsvalue])) {
     $accesssettings = $config[$accessrightsvalue];
   }
   else {
-    if (isset($config['otherwise'])) {
+    if ($do_otherwise && isset($config['otherwise'])) {
       $accesssettings = $config['otherwise'];
     }
   }
@@ -288,8 +235,24 @@ function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrigh
         $accesssettings = $accesssettings['all'];
       }
     }
+    if ($neededkeys) {
+      // Check if any of the needed keys is available, if not do not return the access settings.
+      if (ubl_access_rights_from_metadata_settings_has_any_needed_keys($accesssettings, $neededkeys) === FALSE) {
+        $accesssettings = NULL;
+      }
+    }
   }
   return $accesssettings;
+}
+
+function ubl_access_rights_from_metadata_settings_has_any_needed_keys($accesssettings, $neededkeys) {
+  $availkeyscount = 0;
+  foreach ($neededkeys as $neededkey) {
+    if (isset($accesssettings[$neededkey])) {
+      $availkeyscount++;
+    }
+  }
+  return ($availkeyscount > 0);
 }
 
 function _ubl_access_rights_from_metadata_client_ip_in_range($ipranges) {
@@ -310,7 +273,11 @@ function _ubl_access_rights_from_metadata_client_ip_in_range($ipranges) {
 }
 
 function ubl_access_rights_from_metadata_is_request_from_server($object) {
-  $config = ubl_access_rights_from_metadata_get_configuration(array('object' => $object));
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  if (!$configlocation) {
+    return;
+  }
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   $ipranges = $config['_config']['general']['ip_ranges']; 
   return _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
 }
