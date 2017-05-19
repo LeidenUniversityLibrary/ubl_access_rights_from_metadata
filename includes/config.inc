@@ -13,7 +13,10 @@ function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
     $error = "Error reading file '$inifile'.";
     return FALSE;
   }
-
+  return _ubl_access_rights_from_metadata_valid_config_content($inicontent, $inifile, $error);
+}
+  
+function _ubl_access_rights_from_metadata_valid_config_content($inicontent, $inifile, &$error) {
   $accessconfig = parse_ini_string($inicontent, TRUE);
 
   if ($accessconfig === FALSE || !is_array($accessconfig)) {
@@ -91,11 +94,17 @@ function ubl_access_rights_from_metadata_get_configuration($configlocation) {
       }
     }
     if (!isset($config[$configlocation])) {
+      $inicontent = @file_get_contents($configlocation);
+      $error = '';
+      $isvalid = _ubl_access_rights_from_metadata_valid_config_content($inicontent, 'access config', $error);
+      if (!$isvalid) {
+        // config is not valid; the only save thing we can do is bail...
+        throw new UBLAccessRightsFromMetadataConfigurationException($error);
+      }
       if (is_file($configlocation)) {
         $stat = stat($configlocation);
         $config[$configlocation] = array('_moddate_' => $stat['mtime']);
       }
-      $inicontent = @file_get_contents($configlocation);
       $aconfig = array();
       if ($inicontent !== FALSE) {
         $iniarray = parse_ini_string($inicontent, TRUE);
