@@ -100,7 +100,7 @@ function ubl_access_rights_from_metadata_access_description($obj) {
   $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
   $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   
-  $neededkeys = array('accesstext','accessusetext','accesslink','accessimage');
+  $neededkeys = array('access_text','access_usetext','access_link','access_image');
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys);
 
   $result = array();

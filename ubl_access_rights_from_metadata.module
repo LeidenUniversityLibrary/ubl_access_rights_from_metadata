@@ -237,9 +237,9 @@ function ubl_access_rights_from_metadata_boot() {
   $islandora_object_prefix = 'islandora/object/';
   $strlen_islandora_object_prefix = strlen($islandora_object_prefix);
   if (substr(current_path(), 0, $strlen_islandora_object_prefix) === $islandora_object_prefix) {
+    module_load_include('inc', 'islandora', 'includes/utilities');
     list($objectid) = explode("/", substr(current_path(), $strlen_islandora_object_prefix));
     if (islandora_is_valid_pid($objectid)) {
-      module_load_include('inc', 'islandora', 'includes/utilities');
       $object = islandora_object_load($objectid);
       if ($object) {
         module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
