@@ -33,6 +33,14 @@ function ubl_access_rights_from_metadata_get_access_rights_value($obj, $config, 
         if (!is_array($xpaths)) {
           $xpaths = array(0 => $xpaths);
         }
+        $remove = array();
+        if (isset($rightssourcesettings['remove'])) {
+          $remove = $rightssourcesettings['remove'];
+          if (!is_array($remove)) {
+            $remove = array(0 => $remove);
+          }
+        }
+        
         $content = $obj[$dsid]->content;
         $domdoc = new DOMDocument();
         if ($domdoc->loadXML($content)) {
@@ -42,11 +50,14 @@ function ubl_access_rights_from_metadata_get_access_rights_value($obj, $config, 
             list($prefix, $uri) = explode(' ', $ns, 2);
             $domxpath->registerNamespace($prefix, $uri);
           }
-          foreach ($xpaths as $xpath) {
+          foreach ($xpaths as $index => $xpath) {
             $domnodelist = $domxpath->query($xpath);
             if ($domnodelist && $domnodelist->length > 0) {
               foreach ($domnodelist as $domnode) {
                 $text = $domnode->textContent;
+                if (isset($remove[$index]) && strlen($remove[$index]) > 0) {
+                  $text = str_replace($remove[$index], '', $text);
+                }
                 if (isset($text) && strlen($text) > 0) {
                   if (strlen($id2acvalue[$id]['arv']) > 0) {
                     $id2acvalue[$id]['arv'] .= '--';

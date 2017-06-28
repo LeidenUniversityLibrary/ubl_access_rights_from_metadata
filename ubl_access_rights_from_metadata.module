@@ -209,8 +209,10 @@ function ubl_access_rights_from_metadata_islandora_datastream_modified(AbstractO
       module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/xacml');
       module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
      
-      // Set XACML rights according to configuration.
-      ubl_access_rights_from_metadata_xacml_modify_if_needed($object, $config);
+      if (variable_get('ubl_access_rights_from_metadata_enable_xacml', FALSE)) {
+        // Set XACML rights according to configuration.
+        ubl_access_rights_from_metadata_xacml_modify_if_needed($object, $config);
+      }
     }
   }
 }
