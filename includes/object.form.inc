@@ -35,7 +35,7 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
     $accessible = ubl_access_rights_from_metadata_accessible_dsids($object, $fromobjid);
     $accessible = (count($accessible) > 0)?implode(', ', $accessible):'<em>' . t('Undefined') . '</em>';
     if ($fromobjid) {
-      $accessible .= ' <em>(from access rights of parent ' . $fromobjid . ')</em>';
+      $accessible .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
     }
     $table .= '<TR><TH>' . t('Accessible datastreams') . '</TH><TD>' . $accessible . '</TD></TR>';
      
@@ -43,7 +43,7 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
     $restricted = ubl_access_rights_from_metadata_restricted_dsids($object, $fromobjid);
     $restricted = (count($restricted) > 0)?implode(', ', $restricted):'<em>' . t('Undefined') . '</em>';
     if ($fromobjid) {
-      $restricted .= ' <em>(from access rights of parent ' . $fromobjid . ')</em>';
+      $restricted .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
     }
     $table .= '<TR><TH>' . t('Restricted datastreams') . '</TH><TD>' . $restricted . '</TD></TR>';
      
@@ -56,14 +56,14 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
         $table .= $dsid . ' => ' . $text . '<BR/>'; 
       }
       if ($fromobjid) {
-        $table .= ' <em>(from access rights of parent ' . $fromobjid . ')</em>';
+        $table .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
       }
       $table .= '</TD>';
     }
     else {
       $table .= '<TD><em>' . t('None') . '</em>';
       if ($fromobjid) {
-        $table .= ' <em>(from access rights of parent ' . $fromobjid . ')</em>';
+        $table .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
       }
       $table .= '</TD>';
     }
@@ -73,13 +73,13 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
     $roles = ubl_access_rights_from_metadata_allowed_roles($object, $fromobjid);
     $roles = (count($roles) > 0)?implode(', ', $roles):'<em>' . t('Undefined') . '</em>';
     if ($fromobjid) {
-      $roles .= ' <em>(from access rights of parent ' . $fromobjid . ')</em>';
+      $roles .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
     }
     $table .= '<TR><TH>' . t('Allowed roles') . '</TH><TD>' . $roles . '</TD></TR>';
 
     $fromobjid = '';
     $accessdesc = ubl_access_rights_from_metadata_access_description($object, $fromobjid);
-    $from = ($fromobjid)?' <em>(from access rights of parent ' . $fromobjid . ')</em>':'';
+    $from = ($fromobjid)?' <em>(from access rights of ' . $fromobjid . ')</em>':'';
     $table .= '<TR><TH>' . t('Access text') . '</TH><TD>' . $accessdesc['accesstext'] . $from . '</TD></TR>';
     $table .= '<TR><TH>' . t('Access use text') . '</TH><TD>' . $accessdesc['accessusetext'] . $from . '</TD></TR>';
     $table .= '<TR><TH>' . t('Access link') . '</TH><TD>' . $accessdesc['accesslink'] . $from . '</TD></TR>';

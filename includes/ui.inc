@@ -22,8 +22,8 @@ function ubl_access_rights_from_metadata_accessible_dsids($obj, &$realobjid = NU
   $accessibledsids = array_diff($accessibledsids, $denydsids);
 
   if ($realobjid !== NULL) {
-    if ($obj->id !== $accesssettings['from_object_id']) {
-      $realobjid = $accesssettings['from_object_id'];
+    if ($obj->id !== $accesssettings['source_of_settings']) {
+      $realobjid = $accesssettings['source_of_settings'];
     }
   }
 
@@ -47,8 +47,8 @@ function ubl_access_rights_from_metadata_restricted_dsids($obj, &$realobjid = NU
   $restricteddsids = array_diff($denydsids, $accessibledsids);
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['from_object_id']) {
-      $realobjid = $accesssettings['from_object_id'];
+   if ($obj->id !== $accesssettings['source_of_settings']) {
+      $realobjid = $accesssettings['source_of_settings'];
     }
   }
 
@@ -68,8 +68,8 @@ function ubl_access_rights_from_metadata_allowed_roles($obj, &$realobjid = NULL)
   $allowedroles = isset($accesssettings['allow_access_for_role'])?$accesssettings['allow_access_for_role']:array();
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['from_object_id']) {
-      $realobjid = $accesssettings['from_object_id'];
+   if ($obj->id !== $accesssettings['source_of_settings']) {
+      $realobjid = $accesssettings['source_of_settings'];
     }
   }
 
@@ -109,8 +109,8 @@ function ubl_access_rights_from_metadata_downloadable_dsids_with_label($obj, &$r
   }
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['from_object_id']) {
-      $realobjid = $accesssettings['from_object_id'];
+   if ($obj->id !== $accesssettings['source_of_settings']) {
+      $realobjid = $accesssettings['source_of_settings'];
     }
   }
 
@@ -134,8 +134,8 @@ function ubl_access_rights_from_metadata_access_description($obj, &$realobjid = 
   $result['accessimage'] = isset($accesssettings['access_image'])?$accesssettings['access_image']:'';
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['from_object_id']) {
-      $realobjid = $accesssettings['from_object_id'];
+   if ($obj->id !== $accesssettings['source_of_settings']) {
+      $realobjid = $accesssettings['source_of_settings'];
     }
   }
 
@@ -170,7 +170,7 @@ function ubl_access_rights_from_metadata_get_access_settings_from_object_or_pare
         if ($pobj) {
           $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($pobj, $config, $neededkeys);
           if ($accesssettings !== NULL) {
-            $accesssettings['from_object_id'] = $ppid;
+            $accesssettings['source_of_settings'] = $ppid;
             break; 
           }
         }
@@ -179,9 +179,12 @@ function ubl_access_rights_from_metadata_get_access_settings_from_object_or_pare
   }
   if (($accesssettings === NULL) || !ubl_access_rights_from_metadata_settings_has_any_needed_keys($accesssettings, $neededkeys)) {
     $accesssettings = ubl_access_rights_from_metadata_get_access_rights_settings($accessvalue, $config, TRUE, $neededkeys);
+    if ($accesssettings) {
+      $accesssettings['source_of_settings'] = 'otherwise';
+    }
   }
-  if (!isset($accesssettings['from_object_id'])) {
-    $accesssettings['from_object_id'] = '';
+  if (!isset($accesssettings['source_of_settings'])) {
+    $accesssettings['source_of_settings'] = '';
   }
 
   return $accesssettings;
