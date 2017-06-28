@@ -65,6 +65,13 @@ function drush_ubl_access_rights_from_metadata_change_xacml_policy_based_on_meta
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/xacml');
   module_load_include('inc', 'islandora_xacml_api', 'includes/islandora_xacml');
 
+  if (!variable_get('ubl_access_rights_from_metadata_enable_xacml', FALSE)) {
+    if (!drush_confirm('XACML policy updates are disabled in admin/islandora/tools/ubl_access_rights_from_metadata. Are you sure you want to continue?')) {
+      drush_log('Stopped');
+      return;
+    }
+  }
+
   $configlocation = drush_get_option('configuration');
   $collection = drush_get_option('collection');
 
