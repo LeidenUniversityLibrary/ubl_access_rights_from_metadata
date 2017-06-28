@@ -23,6 +23,16 @@ function ubl_access_rights_from_metadata_menu() {
     'access arguments' => array(UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN),
     'file' => 'includes/admin.form.inc',
   );
+  $items['islandora/object/%islandora_object/manage/access_rights_from_metadata'] = array(
+    'title' => 'Access rights from metadata',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 0,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('access_rights_view_form', 2),
+    'access arguments' => array(UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN),
+    'file' => 'includes/object.form.inc',
+  );
+
   return $items;
 }
 
