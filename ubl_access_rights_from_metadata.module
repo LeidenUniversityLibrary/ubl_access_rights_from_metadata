@@ -149,6 +149,37 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
 }
 
 /**
+ * Implements hook_preprocess()
+ **/
+function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
+  if ($hook === 'islandora_book_book') {
+    // pages of a book are retrieved with a server ip address, thus can not check if pages are within IP range... do it here...
+    if (isset($variables['object']) && isset($variables['viewer'])) {
+      $object = $variables['object'];
+
+      $viewer = $variables['viewer'];
+      $pages = $viewer->variables['viewer_params']['pages'];
+      $newpages = array();
+      global $user;
+      foreach ($pages as $pageid => $pageinfo) {
+        $pageobj = islandora_object_load($pageid);
+        $access = _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($pageobj, 'JP2', $user);
+        if ($access !== FALSE) {
+          $newpages[$pageid] = $pageinfo;
+        }
+      }
+      if (count($newpages) > 0) {
+        $viewer->variables['viewer_params']['pages'] = $newpages;
+        $variables['viewer_params']['pages'] = $newpages;
+      }
+      else {
+        unset($variables['viewer']);
+      }
+    } 
+  }
+}
+
+/**
  * Implements hook_islandora_datastream_access()
  **/
 function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islandora_datastream, $user) {
@@ -168,6 +199,10 @@ function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islan
     return NULL;
   }
 
+  return _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($obj, $dsid, $user);
+}
+
+function _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($obj, $dsid, $user) {
   // First check if user is allowed access.
   $allowedroles = ubl_access_rights_from_metadata_allowed_roles($obj);
   if ($allowedroles && is_array($allowedroles)) {
