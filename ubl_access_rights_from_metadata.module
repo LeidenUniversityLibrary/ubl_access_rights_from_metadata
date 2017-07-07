@@ -173,7 +173,7 @@ function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
         $variables['viewer_params']['pages'] = $newpages;
       }
       else {
-        unset($variables['viewer']);
+        $variables['viewer'] = NULL;
       }
     } 
   }
