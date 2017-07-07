@@ -142,6 +142,20 @@ function ubl_access_rights_from_metadata_access_description($obj, &$realobjid = 
   return $result;
 }
 
+function ubl_access_rights_from_metadata_is_ip_dependent($obj, &$realobjid = NULL) {
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+
+  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
+
+  $neededkeys = array('allow_access_to_dsid','deny_access_to_dsid');
+  $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys);
+
+  return isset($accesssettings['ip_dependent'])?$accesssettings['ip_dependent']:FALSE;
+}
+
+
 function ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');

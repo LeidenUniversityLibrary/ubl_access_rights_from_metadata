@@ -85,15 +85,17 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
     $table .= '<TR><TH>' . t('Access link') . '</TH><TD>' . $accessdesc['accesslink'] . $from . '</TD></TR>';
     $table .= '<TR><TH>' . t('Access image') . '</TH><TD>' . $accessdesc['accessimage'] . $from . '</TD></TR>';
 
-    if (ubl_access_rights_from_metadata_is_ip_dependent($accessvalue, $config)) {
+    if (ubl_access_rights_from_metadata_is_ip_dependent($object, $fromobjid)) {
       $ipranges = $config['_config']['internal']['ip_ranges'];
       $isinternal = _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
       $text = $isinternal?t("Above is for someone who is within the IP range (internal)"):t("Above is for someone external"); 
       $text .= ' (current ip adress is: ' . ip_address() . ')';
-      $table .= '<TR><TH>' . t('IP dependent content') . '</TH><TD>' . $text . '</TD></TR>';
+      $from = ($fromobjid)?' <em>(from access rights of ' . $fromobjid . ')</em>':'';
+      $table .= '<TR><TH>' . t('IP dependent content') . '</TH><TD>' . $text . $from . '</TD></TR>';
     }
     else {
-      $table .= '<TR><TH>' . t('IP dependent content') . '</TH><TD>' . t('This is not IP dependent content.') . '</TD></TR>';
+      $from = ($fromobjid)?' <em>(from access rights of ' . $fromobjid . ')</em>':'';
+      $table .= '<TR><TH>' . t('IP dependent content') . '</TH><TD>' . t('This is not IP dependent content.') . $from . '</TD></TR>';
     }
   }
   else {

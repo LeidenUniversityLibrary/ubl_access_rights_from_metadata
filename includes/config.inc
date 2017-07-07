@@ -203,11 +203,6 @@ function ubl_access_rights_from_metadata_get_all_access_rights_settings($accessr
   return array_merge($external, $internal, $all);
 }
 
-function ubl_access_rights_from_metadata_is_ip_dependent($accessrightsvalue, $config) {
-  $internal = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, TRUE, NULL, 'internal');
-  return (is_array($internal));
-}
-
 function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys = NULL, $specifickey = FALSE) {
   $accesssettings = NULL;
   if (isset($config[$accessrightsvalue])) {
@@ -230,12 +225,14 @@ function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrigh
         if ($isinternal) {
           if (isset($accesssettings['internal'])) {
             $accesssettings = $accesssettings['internal'];
+            $accesssettings['ip_dependent'] = TRUE;
             $hasInExternal = TRUE;
           }
         }
         else {
           if (isset($accesssettings['external'])) {
             $accesssettings = $accesssettings['external'];
+            $accesssettings['ip_dependent'] = TRUE;
             $hasInExternal = TRUE;
           }
         }
