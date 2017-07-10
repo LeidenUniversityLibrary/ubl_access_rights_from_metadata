@@ -154,11 +154,10 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
 function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
   if ($hook === 'islandora_book_book') {
     // pages of a book are retrieved with a server ip address, thus can not check if pages are within IP range... do it here...
-    if (isset($variables['object']) && isset($variables['viewer'])) {
+    if (isset($variables['object']) && isset($variables['viewer_id'])) {
       $object = $variables['object'];
 
-      $viewer = $variables['viewer'];
-      $pages = $viewer->variables['viewer_params']['pages'];
+      $pages = $variables['viewer_params']['pages'];
       $newpages = array();
       global $user;
       foreach ($pages as $pageid => $pageinfo) {
@@ -168,14 +167,12 @@ function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
           $newpages[$pageid] = $pageinfo;
         }
       }
-      if (count($newpages) > 0) {
-        $viewer->variables['viewer_params']['pages'] = $newpages;
-        $variables['viewer_params']['pages'] = $newpages;
+      $variables['viewer_params']['pages'] = $newpages;
+      if (count($newpages) == 0) {
+        // remove the viewer if not pages are available.
+        $variables['viewer_id'] = NULL;
       }
-      else {
-        $variables['viewer'] = NULL;
-      }
-    } 
+    }
   }
 }
 
