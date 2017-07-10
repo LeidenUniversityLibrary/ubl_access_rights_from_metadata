@@ -155,6 +155,8 @@ function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
   if ($hook === 'islandora_book_book') {
     // pages of a book are retrieved with a server ip address, thus can not check if pages are within IP range... do it here...
     if (isset($variables['object']) && isset($variables['viewer_id'])) {
+      module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+
       $object = $variables['object'];
 
       $pages = $variables['viewer_params']['pages'];
@@ -176,27 +178,6 @@ function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
   }
 }
 
-function ubl_access_rights_from_metadata_preprocess_image(&$variables) {
-  $tnpostfix = '/datastream/TN/view';
-  $fullimagepath = drupal_get_normal_path($variables['path']);
-  if (substr($fullimagepath, -strlen($tnpostfix)) === $tnpostfix) {
-    $imagepath = drupal_get_normal_path(substr($fullimagepath,0,-strlen($tnpostfix)));
-    $matches = array();
-    if (preg_match('#^.*/([^:/]+)(?:/|:|%3A|%3a)([^:/]+)$#', $imagepath, $matches)) {
-      $objid = $matches[1] . ':' . $matches[2];
-      $object = islandora_object_load($objid);
-      if ($object) {
-        global $user;
-        $access = _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($object, 'TN', $user);
-        if ($access === FALSE) {
-          $newthumburl = drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/images/tn_restricted_access.gif';
-          $variables['path'] = $newthumburl;
-        }
-      }
-    }
-  }
-}
-
 /**
  * Implements hook_islandora_datastream_access()
  **/
@@ -211,11 +192,6 @@ function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islan
 
   $obj = $islandora_datastream->parent;
   $dsid = $islandora_datastream->id;
-
-  if ($dsid === 'TN') {
-    // thumbnails are handled specially...
-    return NULL;
-  }
 
   if (ubl_access_rights_from_metadata_is_request_from_server($obj)) {
     // this is a request from an Islandora server, so let someone else handle the access.
