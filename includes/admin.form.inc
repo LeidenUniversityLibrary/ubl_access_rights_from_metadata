@@ -20,6 +20,7 @@ function ubl_access_rights_from_metadata_admin_form(array $form, array &$form_st
   else {
     $config_location = variable_get('ubl_access_rights_from_metadata_config_location');
   }
+  $tn_url = variable_get('ubl_access_rights_from_metadata_tn_url');
   $enable_xacml = variable_get('ubl_access_rights_from_metadata_enable_xacml', FALSE);
 
   $form['config'] = array(
@@ -31,6 +32,12 @@ function ubl_access_rights_from_metadata_admin_form(array $form, array &$form_st
     '#title' => t('Configuration location'),
     '#description' => t('An absolute file path or URL to the configuration file.'),
     '#default_value' => $config_location,
+  );
+  $form['config']['tn_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Access restricted thumbnail URL'),
+    '#description' => t('A URL (absolute or relative to the server) of a thumbnail to use when the current item is not accessible by the user.'),
+    '#default_value' => $tn_url,
   );
   $form['config']['enable_xacml'] = array(
     '#type' => 'checkbox',
@@ -63,6 +70,7 @@ function ubl_access_rights_from_metadata_admin_form_submit(array $form, array &$
   $oldconfiglocation = variable_get('ubl_access_rights_from_metadata_config_location');
   variable_set('ubl_access_rights_from_metadata_config_location', $form_state['values']['location']);
   variable_set('ubl_access_rights_from_metadata_enable_xacml', $form_state['values']['enable_xacml']);
+  variable_set('ubl_access_rights_from_metadata_tn_url', $form_state['values']['tn_url']);
   if ($oldconfiglocation) {
     ubl_access_rights_from_metadata_refresh_configuration($oldconfiglocation);
   }

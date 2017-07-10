@@ -9,6 +9,16 @@
 // Permissions.
 define('UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN', 'Access rights from metadata admin');
 
+/**
+ * Implements hook_init().
+ */
+function ubl_access_rights_from_metadata_init() {
+  $tnaccessrestricted = variable_get('ubl_access_rights_from_metadata_tn_url');
+  if ($tnaccessrestricted) {
+    drupal_add_js(array('ubl_access_rights_from_metadata' => array('tn_access_restricted' => $tnaccessrestricted)), array('type' => 'setting'));
+    drupal_add_js(drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/js/ubl_access_rights_from_metadata.js');
+  }
+}
 
 /**
  * Implements hook_menu().

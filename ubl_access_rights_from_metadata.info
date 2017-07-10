@@ -3,5 +3,3 @@ description = Sets and defines the access rights of an object based on its metad
 package = UBL
 version = "7.x-1.x-dev"
 core = "7.x"
-
-scripts[] = js/ubl_access_rights_from_metadata.js
