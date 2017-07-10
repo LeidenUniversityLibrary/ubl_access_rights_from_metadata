@@ -18,7 +18,7 @@
       }
       var parts = img.src.split("?", 2);
       if (parts[0].endsWith('datastream/TN/view')) {
-        var newsrc = settings.ubl_access_rights_from_metadata.tn_access_restricted;
+        var newsrc = tnurl;
         if (parts.length == 2) {
           newsrc += '?' + parts[1];
         }
@@ -30,7 +30,9 @@
     };
     _replaceInaccessibleThumbnail(this);
   };
-  $('.islandora-solr-search-result IMG')
-    .on("error", replaceInaccessibleThumbnail);
+  $(document).ready(function() {
+    $('.islandora-solr-search-result IMG')
+      .on("error", replaceInaccessibleThumbnail);
+  });
 })(jQuery);
 
