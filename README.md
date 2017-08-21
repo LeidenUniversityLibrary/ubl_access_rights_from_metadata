@@ -18,23 +18,24 @@ Install as usual, see [this](https://drupal.org/documentation/install/modules-th
 
 ## Configuration
 
-At admin/islandora/tools/ubl_access_rights_from_metadata the configuration location can be defined. This should be an absolute file path
+At `admin/islandora/tools/ubl_access_rights_from_metadata` the configuration location can be defined. This should be an absolute file path
 or a URL to the configuration file. See 'ini file' for more information.
 
 The 'Enable XACML' checkbox enables the modification of the XACML policy of the object whose metadata has changed. This is only useful if the
 objects can be accessed directly inside Fedora and you want to have access rights in Fedora as well. However, this will have some drawbacks,
 because everytime the metadata changes, potentially the XACML policy of the object (and all of its children!) is changed as well.
 If you only access your objects through Drupal, there is no need to enable XACML restrictions.
+PLEASE NOTE: IP range restrictions can only be inforced through Islandora and not through XACML policies, so these will never have XACML policies.
 
 ### ini file
 
-The configuration file is a file in the PHP INI format, see https://en.wikipedia.org/wiki/INI_file
+The configuration file is a file in the PHP INI format, see `https://en.wikipedia.org/wiki/INI_file`
 for more information about this format. PHP has some special features, such as support for multiple values for one key by using key[] or key[attr].
 See the `example_ini_files` directory for examples.
 
 The configuration file should have the following sections:
 
-The section [general] is for general configuration, such as the IP range (ip_range) of the server(s) Islandora runs on, so that
+The section [general] is for general configuration, such as the IP range (`ip_range`) of the server(s) Islandora runs on, so that
 these servers always have access to the datastreams if needed. Also, a translation from DSID to a label is defined here (dsid2label).
 
 The section [rightssource] configures the source of the metadata value to use as the base of the rights.
@@ -51,11 +52,11 @@ the user is within the IP ranges specified in the [internal] section.
 
 The section [otherwise] handles the case of other metadata values or missing metadata values.
 The rights value sections can contain the following keys:
- - deny_access_to_dsid[] : repeatable, deny access to the DSID mentioned (this is also done via XACML for non-IP-dependent access rights if this is enabled).
- - allow_access_to_dsid[] : repeatable, allow access to the DSID mentioned
- - allow_access_for_role[] : repeatable, the user role that has access to all datastreams.
- - provide_download_of_dsid[] : repeatable, provide a download button for this datastream. Should not be in deny_access_to_dsid. Should be in allow_access_to_dsid to make sure the download is possible.
-The values of the "*_to_dsid" and "provide_download_of_dsid" keys should be valid DSID's, or ALL (for all datastreams) or NONE (for no datastream at all).
+ - `deny_access_to_dsid[]` : repeatable, deny access to the DSID mentioned (this is also done via XACML for non-IP-dependent access rights if this is enabled).
+ - `allow_access_to_dsid[]` : repeatable, allow access to the DSID mentioned
+ - `allow_access_for_role[]` : repeatable, the user role that has access to all datastreams.
+ - `provide_download_of_dsid[]` : repeatable, provide a download button for this datastream. Should not be in `deny_access_to_dsid`. Should be in `allow_access_to_dsid` to make sure the download is possible.
+The values of the "`*_to_dsid`" and "`provide_download_of_dsid`" keys should be valid DSID's, or ALL (for all datastreams) or NONE (for no datastream at all).
 
 Below examples of the parts of the configuration file:
 
@@ -163,6 +164,30 @@ Because this module also provides a download button, the code below should be in
   print render($block);
 
 ```
+
+## drush commands
+
+### change\_xacml\_policy\_based\_on\_metadata
+
+Change the XACML policy based on the metadata of the objects. An absolute path to a configuration directory with ini files or a single ini file should be supplied. Also a collection ID is mandatory.
+This will give a warning when 'Enable XML' is off.
+
+```
+drush --user=admin change_xacml_policy_based_on_metadata --collection=islandora:root --configuration=/path/to/a/ini/file
+drush --user=admin change_xacml_policy_based_on_metadata --collection=islandora:root --configuration=/url/to/a/ini/file
+drush --user=admin cxpbomd --collection=islandora:root --configuration=/url/to/a/ini/file
+```
+
+### check\_access\_rights\_value
+
+Check the access rights value of the children of a specific collection.
+
+```
+drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/path/to/a/ini/file
+drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/url/to/a/ini/file
+drush --user=admin carv --collection=islandora:root --configuration=/url/to/a/ini/file
+```
+
 
 ## Maintainers/Sponsors
 

@@ -21,6 +21,19 @@ function ubl_access_rights_from_metadata_drush_command() {
       'drush --user=admin cxpbomd --collection=islandora:root --configuration=/url/to/a/ini/file',
     ),
   );
+  $items['check_access_rights_value'] = array(
+    'description' => 'Check the access rights value of the children of a specific collection.',
+    'options' => array(
+      'collection' => 'Mandatory, one collection ID.',
+      'configuration' => 'Mandatory, the absolute filepath to an ini file.',
+    ),
+    'aliases' => array('carv'),
+    'examples' => array(
+      'drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/path/to/a/ini/file',
+      'drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/url/to/a/ini/file',
+      'drush --user=admin carv --collection=islandora:root --configuration=/url/to/a/ini/file',
+    ),
+  );
   return $items;
 }
 
@@ -28,6 +41,10 @@ function ubl_access_rights_from_metadata_drush_command() {
  * Implements drush_hook_COMMAND_validate().
  */
 function drush_ubl_access_rights_from_metadata_change_xacml_policy_based_on_metadata_validate() {
+  return _ubl_access_rights_from_metadata_validate_collection_configuration();
+}
+
+function _ubl_access_rights_from_metadata_validate_collection_configuration() {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
 
   $configlocation = drush_get_option('configuration');
@@ -76,15 +93,63 @@ function drush_ubl_access_rights_from_metadata_change_xacml_policy_based_on_meta
   $collection = drush_get_option('collection');
 
   $collectionobj = islandora_object_load($collection);
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   if ($collectionobj && in_array('islandora:collectionCModel', $collectionobj->models)) {
     list($count, $colobjs) = islandora_basic_collection_get_member_objects($collectionobj, -1, -1);
     foreach ($colobjs as $colobj) {
       $cid = $colobj['object']['value'];
       $cobj = islandora_object_load($cid);
       if ($cobj) { 
-        $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
         ubl_access_rights_from_metadata_xacml_modify_if_needed($cobj, $config); 
       }
     }
+  }
+}
+
+/**
+ * Implements drush_hook_COMMAND_validate().
+ */
+function drush_ubl_access_rights_from_metadata_check_access_rights_value_validate() {
+  return _ubl_access_rights_from_metadata_validate_collection_configuration();
+}
+
+/**
+ * Implements drush_hook_COMMAND().
+ */
+function drush_ubl_access_rights_from_metadata_check_access_rights_value() {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+
+  $configlocation = drush_get_option('configuration');
+  $collection = drush_get_option('collection');
+
+  $collectionobj = islandora_object_load($collection);
+  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
+  if ($collectionobj && in_array('islandora:collectionCModel', $collectionobj->models)) {
+    $accessvalue2count = array();
+    list($count, $colobjs) = islandora_basic_collection_get_member_objects($collectionobj, -1, -1);
+    foreach ($colobjs as $colobj) {
+      $cid = $colobj['object']['value'];
+      $cobj = islandora_object_load($cid);
+      if ($cobj) {
+        $av = ubl_access_rights_from_metadata_get_access_rights_value($cobj, $config); 
+        if (!$av) {
+          $av = ' ( without access rights in metadata ) ';
+        }
+        if (isset($accessvalue2count[$av])) {
+          $accessvalue2count[$av] = $accessvalue2count[$av] + 1;
+        }
+        else {
+          $accessvalue2count[$av] = 1;
+        }
+      }
+    }
+    print "\nCheck access rights value results:\n";
+    print "==================================\n";
+    ksort($accessvalue2count);
+    foreach ($accessvalue2count as $av => $count) {
+      printf("%5d x %s\n", $count, $av);
+    }
+    print "\n";
   }
 }
