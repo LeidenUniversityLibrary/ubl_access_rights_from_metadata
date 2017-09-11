@@ -126,7 +126,8 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_value() {
   $collectionobj = islandora_object_load($collection);
   $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   if ($collectionobj && in_array('islandora:collectionCModel', $collectionobj->models)) {
-    $accessvalue2count = array();
+    $without_access_rights = ' ( without access rights in metadata ) ';
+    $accessvalue2objids = array();
     list($count, $colobjs) = islandora_basic_collection_get_member_objects($collectionobj, -1, -1);
     foreach ($colobjs as $colobj) {
       $cid = $colobj['object']['value'];
@@ -134,22 +135,25 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_value() {
       if ($cobj) {
         $av = ubl_access_rights_from_metadata_get_access_rights_value($cobj, $config); 
         if (!$av) {
-          $av = ' ( without access rights in metadata ) ';
+          $av = $without_access_rights;
         }
-        if (isset($accessvalue2count[$av])) {
-          $accessvalue2count[$av] = $accessvalue2count[$av] + 1;
+        if (isset($accessvalue2objids[$av])) {
+          $accessvalue2objids[$av] = array();
         }
-        else {
-          $accessvalue2count[$av] = 1;
-        }
+        $accessvalue2objids[$av][] = $cid;
       }
     }
     print "\nCheck access rights value results:\n";
     print "==================================\n";
-    ksort($accessvalue2count);
-    foreach ($accessvalue2count as $av => $count) {
-      printf("%5d x %s\n", $count, $av);
+    ksort($accessvalue2objids);
+    foreach ($accessvalue2objids as $av => $objids) {
+      printf("%5d x %s\n", count($objids), $av);
     }
     print "\n";
+    if (isset($accessvalue2objids[$without_access_rights])) {
+      print "Without access rights:\n";
+      print implode(", ", $accessvalue2objids[$without_access_rights]);
+      print "\n";
+    }
   }
 }
