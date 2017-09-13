@@ -137,7 +137,7 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_value() {
         if (!$av) {
           $av = $without_access_rights;
         }
-        if (isset($accessvalue2objids[$av])) {
+        if (!isset($accessvalue2objids[$av])) {
           $accessvalue2objids[$av] = array();
         }
         $accessvalue2objids[$av][] = $cid;
