@@ -36,7 +36,7 @@ See the `example_ini_files` directory for examples.
 The configuration file should have the following sections:
 
 The section [general] is for general configuration, such as the IP range (`ip_range`) of the server(s) Islandora runs on, so that
-these servers always have access to the datastreams if needed. Also, a translation from DSID to a label is defined here (dsid2label).
+these servers always have access to the datastreams if needed.
 
 The section [rightssource] configures the source of the metadata value to use as the base of the rights.
 The value is constructed in the following manner: the datastream identified by the key "dsid" is used as XML. The (repeating)
@@ -60,15 +60,12 @@ The values of the "`*_to_dsid`" and "`provide_download_of_dsid`" keys should be 
 
 Below examples of the parts of the configuration file:
 
-The general section where the IP range of the Islandora server is defined and some of the datastream labels:
+The general section where the IP range of the Islandora server is defined:
 
 ```
 [general]
 ; ip range for the Islandora server(s)
 ip_range[] = "192.0.2.0-192.0.2.1"
-dsid2label[MODS] = "Metadata (MODS XML)"
-dsid2label[DC] = "Metadata (Dublin Core XML)"
-dsid2label[OBJ] = "Original ({mime})"
 ```
 
 

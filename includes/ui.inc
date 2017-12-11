@@ -89,7 +89,7 @@ function ubl_access_rights_from_metadata_downloadable_dsids_with_label($obj, &$r
   $downloadabledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'provide_download_of_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
 
   $result = array();
-  $dsid2label = isset($config['_config']['general']['dsid2label'])?$config['_config']['general']['dsid2label']:array();
+  $dsid2label = ubl_access_rights_from_metadata_dsids_with_labels();
   foreach ($downloadabledsids as $downloadabledsid) {
     $label = NULL;
     if (isset($dsid2label[$downloadabledsid])) {
@@ -115,6 +115,35 @@ function ubl_access_rights_from_metadata_downloadable_dsids_with_label($obj, &$r
   }
 
   return $result;
+}
+
+function ubl_access_rights_from_metadata_dsids_with_labels() {
+  return array(
+    "MODS"          => t("Descriptive Metadata (MODS)"),
+    "DC"            => t("Descriptive Metadata (DC)"),
+    "OBJ"           => t("Original master"),
+    "JPG"           => t("Image (medium resolution)"),
+    "JP2"           => t("Image (high resolution)"),
+    "MEDIUM_SIZE"   => t("Image (medium resolution)"),
+    "OCR"           => t("Text (OCR)"),
+    "HOCR"          => t("Text (OCR XML)"),
+    "PDF"           => t("PDF"),
+    "PDFA"          => t("PDF/A"),
+    "FULL_TEXT"     => t("Text (from PDF)"),
+    "WAV"           => t("Audio (WAV)"),
+    "Proxy_MP3"     => t("Audio (MP3)"),
+    "PROXY_MP3"     => t("Audio (MP3)"),
+    "OBJ_EXIFTOOL"  => t("Technical metadata"),
+    "MP4"           => t("Video (MP4)"),
+    "MKV"           => t("Video (MKV)"),
+    "TECHMD"        => t("Technical metadata"),
+    "TechMD_DFXML"  => t("Technical metadata"),
+    "TECHMD_FITS"   => t("Technical metadata"),
+    "EAD"           => t("Collection Guide (EAD XML)"),
+    "WARC_CSV"      => t("Web archive"),
+    "WARC_FILTERED" => t("Web archive"),
+    "TN"            => t("Thumbnail"),
+  );
 }
 
 function ubl_access_rights_from_metadata_access_description($obj, &$realobjid = NULL) {
