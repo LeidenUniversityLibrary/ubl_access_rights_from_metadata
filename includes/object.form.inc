@@ -14,7 +14,7 @@ ini_set("display_errors", 1);
  */
 function access_rights_view_form(array $form, array &$form_state, AbstractObject $object) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
 
   $form['ubl_access_rights_from_metadata'] = array(
@@ -25,11 +25,12 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
   $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
   if ($configlocation) {
     $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
-    $accessvalue = ubl_access_rights_from_metadata_get_access_rights_value($object, $config);
-    if (!$accessvalue) {
-      $accessvalue = '<em>' . t('no access value found in metadata of this object') . '</em>';
+    $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($object, $config, NULL); 
+    $from = '';
+    if (isset($accesssettings['source_of_settings']) && strlen($accesssettings['source_of_settings']) > 0) {
+      $from = ' <em>(from access rights of ' . $accesssettings['source_of_settings'] . ')</em>';
     }
-    $table = '<TR><TH>' . t('Access value') . '</TH><TD>' . $accessvalue . '</TD></TR>';
+    $table = '<TR><TH>' . t('Conditions met') . '</TH><TD>' . (empty($accesssettings['_conditions_met'])?"<em>(none)</em>":implode(",", $accesssettings['_conditions_met'])) . $from . '</TD></TR>';
 
     $fromobjid = '';
     $accessible = ubl_access_rights_from_metadata_accessible_dsids($object, $fromobjid);
@@ -70,33 +71,12 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
     $table .= '</TR>';
 
     $fromobjid = '';
-    $roles = ubl_access_rights_from_metadata_allowed_roles($object, $fromobjid);
-    $roles = (count($roles) > 0)?implode(', ', $roles):'<em>' . t('Undefined') . '</em>';
-    if ($fromobjid) {
-      $roles .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
-    }
-    $table .= '<TR><TH>' . t('Allowed roles') . '</TH><TD>' . $roles . '</TD></TR>';
-
-    $fromobjid = '';
     $accessdesc = ubl_access_rights_from_metadata_access_description($object, $fromobjid);
     $from = ($fromobjid)?' <em>(from access rights of ' . $fromobjid . ')</em>':'';
     $table .= '<TR><TH>' . t('Access text') . '</TH><TD>' . $accessdesc['accesstext'] . $from . '</TD></TR>';
     $table .= '<TR><TH>' . t('Access use text') . '</TH><TD>' . $accessdesc['accessusetext'] . $from . '</TD></TR>';
     $table .= '<TR><TH>' . t('Access link') . '</TH><TD>' . $accessdesc['accesslink'] . $from . '</TD></TR>';
     $table .= '<TR><TH>' . t('Access image') . '</TH><TD>' . $accessdesc['accessimage'] . $from . '</TD></TR>';
-
-    if (ubl_access_rights_from_metadata_is_ip_dependent($object, $fromobjid)) {
-      $ipranges = $config['_config']['internal']['ip_ranges'];
-      $isinternal = _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
-      $text = $isinternal?t("Above is for someone who is within the IP range (internal)"):t("Above is for someone external"); 
-      $text .= ' (current ip adress is: ' . ip_address() . ')';
-      $from = ($fromobjid)?' <em>(from access rights of ' . $fromobjid . ')</em>':'';
-      $table .= '<TR><TH>' . t('IP dependent content') . '</TH><TD>' . $text . $from . '</TD></TR>';
-    }
-    else {
-      $from = ($fromobjid)?' <em>(from access rights of ' . $fromobjid . ')</em>':'';
-      $table .= '<TR><TH>' . t('IP dependent content') . '</TH><TD>' . t('This is not IP dependent content.') . $from . '</TD></TR>';
-    }
   }
   else {
     $table = '<TR><TD>' . t('No configuration location') . '</TD></TR>';

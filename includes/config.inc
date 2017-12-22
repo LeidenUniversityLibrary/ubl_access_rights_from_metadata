@@ -17,48 +17,109 @@ function ubl_access_rights_from_metadata_valid_config_file($inifile, &$error) {
 }
   
 function _ubl_access_rights_from_metadata_valid_config_content($inicontent, $inifile, &$error) {
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
+
   $accessconfig = parse_ini_string($inicontent, TRUE);
 
   if ($accessconfig === FALSE || !is_array($accessconfig)) {
     $error = "Error parsing file '$inifile': not an ini file.";
     return FALSE;
   }
-  if (!array_key_exists('rightssource', $accessconfig) || !is_array($accessconfig['rightssource'])) {
-    $error = "Error parsing file '$inifile': missing mandatory section 'rightssource'.";
-    return FALSE;
-  }
-  $hasrightsvaluesection = FALSE;
+  $sections = array('metadata' => array(), 'condition' => array(), 'access' => array());
   foreach ($accessconfig as $key => $values) {
-    if ($key === 'general') {
-      if (!isset($values['ip_range'])) {
-        $error = "Section '$key' should contain 'ip_range' keys";
-      }
+    $keyparts = explode(':', $key);
+    if (count($keyparts) != 2) {
+      $error = t("Section '@section' is invalid, should have format as 'type:value'.", array("@section" => $key));
+      return FALSE;
     }
-    elseif ($key === 'rightssource') {
-      if (!isset($values['dsid'])) {
-        $error = "No key 'dsid' found in '$key'";
+    $sectiontype = $keyparts[0];
+    $sectionname = $keyparts[1];
+    if (has_prefix($key, 'metadata:')) {
+      $mandatory = array('datastream' => '/^[A-Z0-9]+$/', 'xpath' => '');
+      $optional = array('namespace' => array());
+      if (!_ubl_access_rights_from_metadata_valid_subkeys($values, $key, $mandatory, $optional, $error)) {
+        return FALSE;
       }
-      if (!isset($values['xpath'])) {
-        $error = "No key 'xpath' found in '$key'";
-      }
+      $sections['metadata'][] = $sectionname;
     }
-    elseif ($key === 'internal') {
-      if (!is_array($values) || count($values) != 1 || !isset($values['ip_range'])) {
-        $error = "Section '$key' should only contain 'ip_range' keys";
+    elseif (has_prefix($key, 'condition:')) {
+      $mandatory = array();
+      $optional = array(
+        'user_role' => array(),
+        'ip_range' => array(),
+        'condition' => array(),
+        'operator' => '/^(negate|and|or)$/',
+        'metadata' => '',
+        'comparator' => '',
+        'value' => '',
+      );
+      if (!_ubl_access_rights_from_metadata_valid_subkeys($values, $key, $mandatory, $optional, $error)) {
+        return FALSE;
       }
-    }
-    elseif (has_prefix($key, 'all::') || has_prefix($key, 'internal::') || has_prefix($key, 'external::')) {
-      $hasrightsvaluesection = TRUE; 
-      if (!array($values) || count($values) == 0) {
-        $error = "Section '$key' should contain at least 1 key";
+      if (isset($values['operator'])) {
+        $operator = $values['operator'];
+        unset($values['operator']);
       }
-      else {
-        foreach (array('deny_access_to_dsid','allow_access_to_dsid','provide_download_of_dsid','allow_access_for_role') as $k) {
-          if (isset($values[$k]) && !is_array($values[$k])) {
-            $error = "Section '$key' contains key '$k' that is not an array, use '$k\[]'.";
+      if (isset($values['condition'])) {
+        $conditions = $values['condition'];
+        unset($values['condition']);
+      }
+      $mdcomparevalue = array('metadata' => 1, 'comparator' => 1, 'value' => 1);
+      $intersect = array_intersect_key($values, $mdcomparevalue);
+      if (count($intersect) != 0 && count($intersect) != count($mdcomparevalue)) {
+        $error = t("Condition '@section' is invalid, keys 'metadata', 'comparator' and 'value' should all be there or none at all, possibly combined with keys 'operator' and/or 'condition'.", array("@section" => $key));
+        return FALSE;
+      }
+      elseif (isset($values['metadata']) && !in_array($values['metadata'], $sections['metadata'])) {
+        $error = t("Condition '@section' has key 'metadata' = '@value' that is not defined in the section metadata.", array("@section" => $key, "@value" => $values['metadata']));
+        return FALSE;
+      }
+      elseif (isset($values['comparator'])) {
+        $prefix = '_ubl_access_rights_from_metadata_comparator_';
+        $compfunc = $prefix . $values['comparator'];
+        if (!function_exists($compfunc)) {
+          $allfuncs = get_defined_functions();
+          $comparators = array_filter($allfuncs['user'], function($v) { return (substr($v, 0, strlen($prefix)) === $prefix); });
+          $error = t("Comparator '@comparator' in section '@section' is not valid. Use any of these: @comparators", array("@section" => $key, "@comparator" => $values['comparator'], "@comparators" => implode(", ", $comparators)));
+          return FALSE;
+        }
+      }
+      if (isset($values['ip_range'])) {
+        foreach ($values['ip_range'] as $iprange) {
+          $parts = explode('-', $iprange);
+          if (count($parts) !== 2) {
+            $error = t("IP range '@iprange' in section '@section' is not valid. Should be like 1.1.1.1-2.2.2.2", array("@section" => $key, "@iprange" => $iprange));
+            return FALSE;
+          }
+          $min = ipToHex($parts[0]);
+          $max = ipToHex($parts[1]);
+          if (!$min) {
+            $error = t("IP range '@iprange' (first value) in section '@section' is not valid. Should be like 1.1.1.1-2.2.2.2", array("@section" => $key, "@iprange" => $iprange));
+            return FALSE;
+          }
+          if (!$max) {
+            $error = t("IP range '@iprange' (second value) in section '@section' is not valid. Should be like 1.1.1.1-2.2.2.2", array("@section" => $key, "@iprange" => $iprange));
+            return FALSE;
           }
         }
       }
+      $sections['condition'][] = $sectionname;
+    }
+    elseif (has_prefix($key, 'access:')) {
+      $mandatory = array();
+      $optional = array(
+        'deny_access_to_dsid' => array(),
+        'allow_access_to_dsid' => array(),
+        'provide_download_of_dsid' => array(),
+        'access_text' => '',
+        'access_usetext' => '',
+        'access_link' => '/^https?:.*/',
+        'access_image' => '/^https?:.*/',
+      );
+      if (!_ubl_access_rights_from_metadata_valid_subkeys($values, $key, $mandatory, $optional, $error)) {
+        return FALSE;
+      }
+      $sections['access'][] = $sectionname;
     }
     else {
       $error = "Unexpected section '$key'";
@@ -67,11 +128,58 @@ function _ubl_access_rights_from_metadata_valid_config_content($inicontent, $ini
       return FALSE;
     }
   }
-  if (!$hasrightsvaluesection) {
-    $error = "Error parsing file '$inifile': missing a rights value section.";
+  foreach ($sections as $key => $values) {
+    if (count($values) == 0) {
+      $error = t("Missing section '@section'.", array('@section' => $key));
+      return FALSE;
+    }
+  }
+  foreach ($sections['access'] as $sectionname) {
+    if ($sectionname !== 'default' && !in_array($sectionname, $sections['condition'])) {
+      $error = t("Section 'access:@section' does not have a corresponding 'condition:@section'.", array('@section' => $sectionname));
+      return FALSE;
+    }
+  }
+  if (in_array('default', $sections['condition'])) {
+    $error = t("Section 'condition:default' should not exist.");
     return FALSE;
   }
 
+  return TRUE;
+}
+
+function _ubl_access_rights_from_metadata_valid_subkeys($config, $section, $mandatory, $optional, &$error) {
+  $additional = array_diff_key($config, $mandatory, $optional);
+  foreach ($additional as $ak => $av) {
+    $error = t("Section '@section' contains an additional key '@key' (with value '@value') that should not be there.", array("@section" => $section, "@key" => $ak, "@value" => is_array($config[$ak])?implode(",", $config[$ak]):(string)$config[$ak]));
+    return FALSE;
+  }
+  $missing = array_diff_key($mandatory, $config);
+  foreach ($missing as $ak => $av) {
+    $error = t("Section '@section' is missing mandatory key '@key'.", array("@section" => $section, "@key" => $ak));
+    return FALSE;
+  }
+  $all = $mandatory + $optional;
+  foreach ($all as $k => $v) {
+    if (isset($config[$k])) {
+      if (is_array($config[$k]) && !is_array($all[$k])) {
+        $error = t("Section '@section' contains key '@key' with array as value, but should be single value.", array("@section" => $section, "@key" => $k));
+        return FALSE;
+      }
+      if (!is_array($config[$k]) && is_array($all[$k])) {
+        $error = t("Section '@section' contains key '@key' with single value, but should be array value.", array("@section" => $section, "@key" => $k));
+        return FALSE;
+      }
+      if (!is_bool($config[$k]) && is_bool($all[$k])) {
+        $error = t("Section '@section' contains key '@key' with value that should be a boolean value.", array("@section" => $section, "@key" => $k));
+        return FALSE;
+      }
+      if (is_string($config[$k]) && strlen($all[$k]) > 0 && preg_match($all[$k], $config[$k]) === 0) {
+        $error = t("Section '@section' contains key '@key' with incorrect value '$@value'.", array("@section" => $section, "@key" => $k, "@value" => $v));
+        return FALSE;
+      }
+    }
+  }
   return TRUE;
 }
 
@@ -99,52 +207,41 @@ function ubl_access_rights_from_metadata_get_configuration($configlocation) {
       $isvalid = _ubl_access_rights_from_metadata_valid_config_content($inicontent, 'access config', $error);
       if (!$isvalid) {
         // config is not valid; the only save thing we can do is bail...
-        throw new UBLAccessRightsFromMetadataConfigurationException($error);
-      }
-      if (is_file($configlocation)) {
-        $stat = stat($configlocation);
-        $config[$configlocation] = array('_moddate_' => $stat['mtime']);
+        $error = "Error when reading configuration of 'access rights from metadata': $error";
+        throw new RuntimeException($error);
       }
       $aconfig = array();
+      if (is_file($configlocation)) {
+        $stat = stat($configlocation);
+        $aconfig = array('_moddate_' => $stat['mtime']);
+      }
       if ($inicontent !== FALSE) {
         $iniarray = parse_ini_string($inicontent, TRUE);
         if ($iniarray) {
-          foreach ($iniarray as $k => $v) {
-            $parts = explode('::', $k, 2);
-            if (count($parts) == 2) {
-              list($location,$accessvalue) = $parts;
-              if (!isset($aconfig[$accessvalue])) {
-                $aconfig[$accessvalue] = array(); 
-              }
-              $aconfig[$accessvalue][$location] = $v;
+          foreach ($iniarray as $sk => $vs) {
+            list($type, $name) = explode(':', $sk, 2);
+            if (!isset($aconfig[$type])) {
+              $aconfig[$type] = array();
             }
-            else {
-              if (!isset($aconfig['_config'])) {
-                $aconfig['_config'] = array();
-              }
-              if ($k === 'internal' || $k === 'general') {
-                foreach ($iniarray[$k] as $sk => $sv) {
-                  if ($sk === 'ip_range') {
-                    $ipranges = array();
-                    foreach ($iniarray[$k]['ip_range'] as $iprange) {
-                      list($minip, $maxip) = explode('-', $iprange);
-                      $min = ipToHex($minip);
-                      $max = ipToHex($maxip);
-                      if ($min && $max) {
-                        $ipranges[] = array('min' => $min, 'max' => $max);
-                      }
-                    }
-                    $aconfig['_config'][$k]['ip_ranges'] = $ipranges;
-                  }
-                  else {
-                    $aconfig['_config'][$k][$sk] = $sv;
+            if (!isset($aconfig[$type][$name])) {
+              $aconfig[$type][$name] = array();
+            }
+            foreach ($vs as $k => $v) {
+              if ($k === 'ip_range') {
+                foreach ($v as $iprange) {
+                  list($minip, $maxip) = explode('-', $iprange);
+                  $min = ipToHex($minip);
+                  $max = ipToHex($maxip);
+                  if ($min && $max) {
+                    $ipranges[] = array('min' => $min, 'max' => $max);
                   }
                 }
+                $aconfig[$type][$name][$k] = $ipranges;
               }
               else {
-                $aconfig['_config'][$k] = $v;
+                $aconfig[$type][$name][$k] = $v;
               }
-            }
+            } 
           } 
         }
       }
@@ -160,139 +257,6 @@ function ubl_access_rights_from_metadata_refresh_configuration($configlocation) 
   $cachename = $configlocation;
   $cachebin = 'cache_ubl_access_rights_from_metadata_config';
   cache_clear_all($cachename, $cachebin); 
-}
-
-function _ubl_access_rights_from_metadata_unfold_dsid_array($cnfg, $key, $obj, $dontmessdsids = array()) {
-  if (!isset($cnfg[$key])) {
-    return array();
-  }
-  $dsids = $cnfg[$key]; 
-  if (in_array('NONE', $dsids)) {
-    return array();
-  }
-  if (in_array('ALL', $dsids)) {
-    $dsids = array();
-    foreach ($obj as $ds) {
-      $dsid = $ds->id;
-      if (!in_array($dsid, $dontmessdsids)) {
-        $dsids[] = $dsid;
-      }
-    }
-  }
-  return $dsids;
-}
-
-function ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys = NULL) {
-  return _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys);
-}
-
-function ubl_access_rights_from_metadata_get_all_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys = NULL) {
-  $all = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys, 'all');
-  $internal = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys, 'internal');
-  $external = _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys, 'external');
-  
-  if (!is_array($all)) {
-    $all = array();
-  }
-  if (!is_array($internal)) {
-    $internal = array();
-  }
-  if (!is_array($external)) {
-    $external = array();
-  }
-  return array_merge($external, $internal, $all);
-}
-
-function _ubl_access_rights_from_metadata_get_access_rights_settings($accessrightsvalue, $config, $do_otherwise, $neededkeys = NULL, $specifickey = FALSE) {
-  $accesssettings = NULL;
-  if (isset($config[$accessrightsvalue])) {
-    $accesssettings = $config[$accessrightsvalue];
-  }
-  else {
-    if ($do_otherwise && isset($config['otherwise'])) {
-      $accesssettings = $config['otherwise'];
-    }
-  }
-  if (is_array($accesssettings)) {
-    if ($specifickey) {
-      $accesssettings = isset($accesssettings[$specifickey])?$accesssettings[$specifickey]:NULL;
-    }
-    else {
-      $hasInExternal = FALSE;
-      if (isset($accesssettings['internal']) || isset($accesssettings['external'])) {
-        $ipranges = $config['_config']['internal']['ip_ranges']; 
-        $isinternal = _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
-        if ($isinternal) {
-          if (isset($accesssettings['internal'])) {
-            $accesssettings = $accesssettings['internal'];
-            $accesssettings['ip_dependent'] = TRUE;
-            $hasInExternal = TRUE;
-          }
-        }
-        else {
-          if (isset($accesssettings['external'])) {
-            $accesssettings = $accesssettings['external'];
-            $accesssettings['ip_dependent'] = TRUE;
-            $hasInExternal = TRUE;
-          }
-        }
-      }
-      if (!$hasInExternal && isset($accesssettings['all'])) {
-        $accesssettings = $accesssettings['all'];
-      }
-    }
-    if ($neededkeys) {
-      // Check if any of the needed keys is available, if not do not return the access settings.
-      if (ubl_access_rights_from_metadata_settings_has_any_needed_keys($accesssettings, $neededkeys) === FALSE) {
-        $accesssettings = NULL;
-      }
-    }
-  }
-  return $accesssettings;
-}
-
-function ubl_access_rights_from_metadata_settings_has_any_needed_keys($accesssettings, $neededkeys) {
-  $availkeyscount = 0;
-  foreach ($neededkeys as $neededkey) {
-    if (isset($accesssettings[$neededkey])) {
-      $availkeyscount++;
-    }
-  }
-  return ($availkeyscount > 0);
-}
-
-function _ubl_access_rights_from_metadata_client_ip_in_range($ipranges) {
-  $isinrange = FALSE;
-  $clientip = ip_address();
-  $clientiphex = ipToHex($clientip);
-  if ($clientiphex) {
-    foreach ($ipranges as $iprange) {
-      $min = $iprange['min'];
-      $max = $iprange['max'];
-      if (strcmp($min, $clientiphex) <= 0 && strcmp($clientiphex, $max) <= 0) {
-        $isinrange = TRUE;
-        continue;
-      }
-    }
-  }
-  return $isinrange;
-}
-
-function ubl_access_rights_from_metadata_is_request_from_server($object) {
-  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
-  if (!$configlocation) {
-    return;
-  }
-  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
-  $ipranges = $config['_config']['general']['ip_ranges']; 
-  return _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
-}
-
-function ubl_access_rights_from_metadata_get_rights_source_settings($config) {
-  if (isset($config['_config']['rightssource'])) {
-    return $config['_config']['rightssource'];
-  }
-  return array();
 }
 
 function has_prefix($str, $prefix) {
@@ -369,3 +333,4 @@ function ipToHex($ipAddress) {
   }
   return strtolower(str_pad($hex, 32, '0', STR_PAD_LEFT));
 }
+

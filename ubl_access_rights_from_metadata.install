@@ -32,7 +32,15 @@ function ubl_access_rights_from_metadata_uninstall() {
 function ubl_access_rights_from_metadata_schema() {
   // make custom cache table
   $schema['cache_ubl_access_rights_from_metadata_config'] = drupal_get_schema_unprocessed('system', 'cache');
-  $schema['cache_ubl_access_rights_from_metadata_access_rights_value'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_ubl_access_rights_from_metadata_md_value'] = drupal_get_schema_unprocessed('system', 'cache');
   return $schema;
 }
 
+/**
+ * Implements hook_update_N().
+ */
+function ubl_access_rights_from_metadata_update_7200() {
+  if (db_table_exists('cache_ubl_access_rights_from_metadata_access_rights_value')) {
+    db_drop_table('cache_ubl_access_rights_from_metadata_access_rights_value');
+  }
+}

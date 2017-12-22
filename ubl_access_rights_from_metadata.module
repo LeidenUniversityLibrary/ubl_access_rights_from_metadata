@@ -204,10 +204,13 @@ function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islan
     $obj = $islandora_datastream->parent;
     $dsid = $islandora_datastream->id;
   
+/*
+TODO ???
     if (ubl_access_rights_from_metadata_is_request_from_server($obj)) {
       // this is a request from an Islandora server, so let someone else handle the access.
       return NULL;
     }
+*/
   
     return _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($obj, $dsid, $user);
   }
@@ -215,20 +218,7 @@ function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islan
 }
 
 function _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($obj, $dsid, $user) {
-  // First check if user is allowed access.
-  $allowedroles = ubl_access_rights_from_metadata_allowed_roles($obj);
-  if ($allowedroles && is_array($allowedroles)) {
-    foreach ($allowedroles as $allowedrole) {
-      $role = user_role_load_by_name($allowedrole);
-      if ($role) {
-        if (user_has_role($role->rid, $user)) {
-          // User has access, but let someone else figure out exactly how much.
-          return NULL;
-        }
-      }
-    }
-  }
-
+  // TODO: one-time retrieval of settings
   // Check if the datastream is restricted.
   $restricted = ubl_access_rights_from_metadata_restricted_dsids($obj);
   if (in_array($dsid, $restricted)) {
@@ -277,7 +267,7 @@ function ubl_access_rights_from_metadata_islandora_datastream_modified(AbstractO
  * Implements hook_flush_caches().
  */
 function ubl_access_rights_from_metadata_flush_caches() {
-  return array('cache_ubl_access_rights_from_metadata_config','cache_ubl_access_rights_from_metadata_access_rights_value');
+  return array('cache_ubl_access_rights_from_metadata_config','cache_ubl_access_rights_from_metadata_md_value');
 }
 
 /**
@@ -302,10 +292,12 @@ function ubl_access_rights_from_metadata_boot() {
       if ($object) {
         module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
 
+/* TODO : find a way...
         $fromobj = NULL;
         if (ubl_access_rights_from_metadata_is_ip_dependent($object, $fromobj)) {
           drupal_page_is_cacheable(FALSE);
         }
+*/
       }
     }
   }

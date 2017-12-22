@@ -7,7 +7,7 @@
 
 function ubl_access_rights_from_metadata_accessible_dsids($obj, &$realobjid = NULL) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
 
   $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
   $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
@@ -15,15 +15,16 @@ function ubl_access_rights_from_metadata_accessible_dsids($obj, &$realobjid = NU
   $neededkeys = array('allow_access_to_dsid','deny_access_to_dsid');
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys);
 
-  $accessibledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
-  $denydsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj);
+  $accessibledsids = ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
+  $denydsids = ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj);
 
   // remove any occurence of allowed dsids if it is in the deny dsids also.
   $accessibledsids = array_diff($accessibledsids, $denydsids);
 
   if ($realobjid !== NULL) {
-    if ($obj->id !== $accesssettings['source_of_settings']) {
-      $realobjid = $accesssettings['source_of_settings'];
+    // TODO
+    if ($obj->id !== $accesssettings['_source_of_settings'][0]) {
+      $realobjid = $accesssettings['_source_of_settings'][0];
     }
   }
 
@@ -40,15 +41,15 @@ function ubl_access_rights_from_metadata_restricted_dsids($obj, &$realobjid = NU
   $neededkeys = array('allow_access_to_dsid','deny_access_to_dsid');
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys);
 
-  $accessibledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
-  $denydsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj);
+  $accessibledsids = ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
+  $denydsids = ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj);
 
   // remove any occurence of deny dsids if it is in the allowed dsids also.
   $restricteddsids = array_diff($denydsids, $accessibledsids);
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['source_of_settings']) {
-      $realobjid = $accesssettings['source_of_settings'];
+   if ($obj->id !== $accesssettings['_source_of_settings'][0]) {
+      $realobjid = $accesssettings['_source_of_settings'][0];
     }
   }
 
@@ -68,8 +69,8 @@ function ubl_access_rights_from_metadata_allowed_roles($obj, &$realobjid = NULL)
   $allowedroles = isset($accesssettings['allow_access_for_role'])?$accesssettings['allow_access_for_role']:array();
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['source_of_settings']) {
-      $realobjid = $accesssettings['source_of_settings'];
+   if ($obj->id !== $accesssettings['_source_of_settings'][0]) {
+      $realobjid = $accesssettings['_source_of_settings'][0];
     }
   }
 
@@ -86,7 +87,7 @@ function ubl_access_rights_from_metadata_downloadable_dsids_with_label($obj, &$r
   $neededkeys = array('provide_download_of_dsid');
   $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys);
 
-  $downloadabledsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'provide_download_of_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
+  $downloadabledsids = ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'provide_download_of_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
 
   $result = array();
   $dsid2label = ubl_access_rights_from_metadata_dsids_with_labels();
@@ -109,8 +110,8 @@ function ubl_access_rights_from_metadata_downloadable_dsids_with_label($obj, &$r
   }
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['source_of_settings']) {
-      $realobjid = $accesssettings['source_of_settings'];
+   if ($obj->id !== $accesssettings['_source_of_settings'][0]) {
+      $realobjid = $accesssettings['_source_of_settings'][0];
     }
   }
 
@@ -163,72 +164,103 @@ function ubl_access_rights_from_metadata_access_description($obj, &$realobjid = 
   $result['accessimage'] = isset($accesssettings['access_image'])?$accesssettings['access_image']:'';
 
   if ($realobjid !== NULL) {
-   if ($obj->id !== $accesssettings['source_of_settings']) {
-      $realobjid = $accesssettings['source_of_settings'];
+   if ($obj->id !== $accesssettings['_source_of_settings'][0]) {
+      $realobjid = $accesssettings['_source_of_settings'][0];
     }
   }
 
   return $result;
 }
 
-function ubl_access_rights_from_metadata_is_ip_dependent($obj, &$realobjid = NULL) {
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+function ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config) {
 
-  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
-  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
+  $settings = &drupal_static(__FUNCTION__);
 
-  $neededkeys = array('allow_access_to_dsid','deny_access_to_dsid');
-  $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys);
-
-  return isset($accesssettings['ip_dependent'])?$accesssettings['ip_dependent']:FALSE;
-}
-
-
-function ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($obj, $config, $neededkeys) {
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
-
-  $accessvalue = ubl_access_rights_from_metadata_get_access_rights_value($obj, $config);
-  $accesssettings = ubl_access_rights_from_metadata_get_access_rights_settings($accessvalue, $config, FALSE);
-
-  $part_of = NULL;
-  if ($accesssettings === NULL) {
-    // Book page?
-    $part_of = $obj->relationships->get(ISLANDORA_RELS_EXT_URI, 'isPageOf');
-    // Other member?
-    if (empty($part_of)) {
-      $part_of = $obj->relationships->get(ISLANDORA_RELS_EXT_URI, 'isMemberOf');
+  if (!isset($settings[$obj->id])) {
+    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
+    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
+  
+    $accesssettings = ubl_access_rights_from_metadata_access_rights_settings_for_object($obj, $config);
+    if (!empty($accesssettings)) {
+      $accesssettings['_source_of_settings'][] = $obj->id;
     }
-    if (empty($part_of)) {
-    // Compound part?
-      $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
-      $part_of = $obj->relationships->get(FEDORA_RELS_EXT_URI, $rels_predicate);
-    }
+    $neededkeys = array_keys(ubl_access_rights_from_metadata_default_settings());
+  
+    $part_of = NULL;
 
-    if (!empty($part_of) && is_array($part_of)) {
-      foreach ($part_of as $part) {
-        $ppid = $part['object']['value'];
-        $pobj = islandora_object_load($ppid);
-        if ($pobj) {
-          $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($pobj, $config, $neededkeys);
-          if ($accesssettings !== NULL) {
-            $accesssettings['source_of_settings'] = $ppid;
-            break; 
+    if (!ubl_access_rights_from_metadata_settings_has_all_needed_keys($accesssettings, $neededkeys)) {
+      // Book page?
+      $part_of = $obj->relationships->get(ISLANDORA_RELS_EXT_URI, 'isPageOf');
+      // Other member?
+      if (empty($part_of)) {
+        $part_of = $obj->relationships->get(ISLANDORA_RELS_EXT_URI, 'isMemberOf');
+      }
+      if (empty($part_of)) {
+      // Compound part?
+        $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
+        $part_of = $obj->relationships->get(FEDORA_RELS_EXT_URI, $rels_predicate);
+      }
+
+      if (!empty($part_of) && is_array($part_of)) {
+        foreach ($part_of as $part) {
+          $ppid = $part['object']['value'];
+          $pobj = islandora_object_load($ppid);
+          if ($pobj) {
+            $paccesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($pobj, $config);
+            if (!empty($paccesssettings)) {
+              $accesssettings['_source_of_settings'] = array_unique(array_merge($accesssettings['_source_of_settings'], $paccesssettings['_source_of_settings']));
+              $accesssettings['_conditions_met'] = array_unique(array_merge($accesssettings['_conditions_met'], $paccesssettings['_conditions_met']));
+              $accesssettings['_ip_dependent'] = $accesssettings['_ip_dependent'] || $paccesssettings['_ip_dependent'];
+              $accesssettings = $accesssettings + $paccesssettings;
+              if (ubl_access_rights_from_metadata_settings_has_all_needed_keys($accesssettings, $neededkeys)) {
+                break; 
+              }
+            }
           }
         }
       }
     }
-  }
-  if (($accesssettings === NULL) || !ubl_access_rights_from_metadata_settings_has_any_needed_keys($accesssettings, $neededkeys)) {
-    $accesssettings = ubl_access_rights_from_metadata_get_access_rights_settings($accessvalue, $config, TRUE, $neededkeys);
-    if ($accesssettings) {
-      $accesssettings['source_of_settings'] = 'otherwise';
+    if (!ubl_access_rights_from_metadata_settings_has_all_needed_keys($accesssettings, $neededkeys)) {
+      $defaults = ubl_access_rights_from_metadata_default_settings();
+      $didusedefault = FALSE;
+      foreach ($defaults as $defaultkey => $defaultsetting) {
+        $value = variable_get('ubl_access_rights_from_metadata_default_' . $defaultkey);
+        if (!array_key_exists($defaultkey, $accesssettings) && !empty($value)) {
+          $accesssettings[$defaultkey] = $value;
+          $didusedefault = TRUE;
+        }
+      }
+      if ($didusedefault) {
+        $accesssettings['_source_of_settings'][] = 'default';
+      }
     }
-  }
-  if (!isset($accesssettings['source_of_settings'])) {
-    $accesssettings['source_of_settings'] = '';
+dpm($accesssettings, "access settings from object " . $obj->id);
+    $settings[$obj->id] = $accesssettings;
   }
 
-  return $accesssettings;
+  return $settings[$obj->id];
+}
+
+function ubl_access_rights_from_metadata_settings_has_all_needed_keys($accesssettings, $neededkeys) {
+  if (empty($neededkeys)) {
+    return TRUE;
+  }
+  foreach ($neededkeys as $neededkey) {
+    if (!array_key_exists($neededkey, $accesssettings)) {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+function ubl_access_rights_from_metadata_default_settings() {
+  return array(
+    'deny_access_to_dsid' => array('title' => t('Restricted datastreams'), 'description' => t('Comma seperated list of datastream IDs of datastreams that are restricted.'), 'type' => 'dsids'),
+    'allow_access_to_dsid' => array('title' => t('Accessible datastreams'), 'description' => t('Comma seperated list of datastream IDs of datastreams that are accessible.'), 'type' => 'dsids'),
+    'provide_download_of_dsid' => array('title' => t('Downloadable datastreams'), 'description' => t('Comma seperated list of datastream IDs that are downloadable.'), 'type' => 'dsids'),
+    'access_text' => array('title' => t('Access text'), 'type' => 'text'),
+    'access_usetext' => array('title' => t('Access use text'), 'type' => 'text'),
+    'access_link' => array('title' => t('Access link'), 'description' => t('A URL to a page explaining the access rights.'), 'type' => 'url'),
+    'access_image' => array('title' => t('Access image'), 'description' => t('A URL to an access image.'), 'type' => 'url'),
+  );
 }

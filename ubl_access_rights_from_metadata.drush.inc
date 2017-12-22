@@ -21,17 +21,17 @@ function ubl_access_rights_from_metadata_drush_command() {
       'drush --user=admin cxpbomd --collection=islandora:root --configuration=/url/to/a/ini/file',
     ),
   );
-  $items['check_access_rights_value'] = array(
-    'description' => 'Check the access rights value of the children of a specific collection.',
+  $items['check_access_rights_settings'] = array(
+    'description' => 'Check the access rights settings of the children of a specific collection.',
     'options' => array(
       'collection' => 'Mandatory, one collection ID.',
       'configuration' => 'Mandatory, the absolute filepath to an ini file.',
     ),
-    'aliases' => array('carv'),
+    'aliases' => array('cars'),
     'examples' => array(
-      'drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/path/to/a/ini/file',
-      'drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/url/to/a/ini/file',
-      'drush --user=admin carv --collection=islandora:root --configuration=/url/to/a/ini/file',
+      'drush --user=admin check_access_rights_settings --collection=islandora:root --configuration=/path/to/a/ini/file',
+      'drush --user=admin check_access_rights_settings --collection=islandora:root --configuration=/url/to/a/ini/file',
+      'drush --user=admin cars --collection=islandora:root --configuration=/url/to/a/ini/file',
     ),
   );
   return $items;
@@ -109,16 +109,16 @@ function drush_ubl_access_rights_from_metadata_change_xacml_policy_based_on_meta
 /**
  * Implements drush_hook_COMMAND_validate().
  */
-function drush_ubl_access_rights_from_metadata_check_access_rights_value_validate() {
+function drush_ubl_access_rights_from_metadata_check_access_rights_settings_validate() {
   return _ubl_access_rights_from_metadata_validate_collection_configuration();
 }
 
 /**
  * Implements drush_hook_COMMAND().
  */
-function drush_ubl_access_rights_from_metadata_check_access_rights_value() {
+function drush_ubl_access_rights_from_metadata_check_access_rights_settings() {
   module_load_include('inc', 'islandora', 'includes/utilities');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
 
   $configlocation = drush_get_option('configuration');
   $collection = drush_get_option('collection');
@@ -126,16 +126,25 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_value() {
   $collectionobj = islandora_object_load($collection);
   $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
   if ($collectionobj && in_array('islandora:collectionCModel', $collectionobj->models)) {
-    $without_access_rights = ' ( without access rights in metadata ) ';
     $accessvalue2objids = array();
     list($count, $colobjs) = islandora_basic_collection_get_member_objects($collectionobj, -1, -1);
     foreach ($colobjs as $colobj) {
       $cid = $colobj['object']['value'];
       $cobj = islandora_object_load($cid);
       if ($cobj) {
-        $av = ubl_access_rights_from_metadata_get_access_rights_value($cobj, $config); 
-        if (!$av) {
-          $av = $without_access_rights;
+        $ars = ubl_access_rights_from_metadata_access_rights_settings_for_object($cobj, $config); 
+        $av = '';
+        if (isset($ars['access_text'])) {
+          $av = $ars['access_text'];
+        }
+        else {
+          $av = '(access undefined)';
+        }
+        if (isset($ars['access_usetext'])) {
+          $av = $av . ' -- ' . $ars['access_usetext'];
+        }
+        else {
+          $av = $av . ' -- ' . '(use undefined)';
         }
         if (!isset($accessvalue2objids[$av])) {
           $accessvalue2objids[$av] = array();
@@ -150,10 +159,5 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_value() {
       printf("%5d x %s\n", count($objids), $av);
     }
     print "\n";
-    if (isset($accessvalue2objids[$without_access_rights])) {
-      print "Without access rights:\n";
-      print implode(", ", $accessvalue2objids[$without_access_rights]);
-      print "\n";
-    }
   }
 }

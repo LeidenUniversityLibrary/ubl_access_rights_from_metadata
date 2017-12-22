@@ -175,14 +175,14 @@ drush --user=admin change_xacml_policy_based_on_metadata --collection=islandora:
 drush --user=admin cxpbomd --collection=islandora:root --configuration=/url/to/a/ini/file
 ```
 
-### check\_access\_rights\_value
+### check\_access\_rights\_settings
 
 Check the access rights value of the children of a specific collection.
 
 ```
-drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/path/to/a/ini/file
-drush --user=admin check_access_rights_value --collection=islandora:root --configuration=/url/to/a/ini/file
-drush --user=admin carv --collection=islandora:root --configuration=/url/to/a/ini/file
+drush --user=admin check_access_rights_settings --collection=islandora:root --configuration=/path/to/a/ini/file
+drush --user=admin check_access_rights_settings --collection=islandora:root --configuration=/url/to/a/ini/file
+drush --user=admin cars --collection=islandora:root --configuration=/url/to/a/ini/file
 ```
 
 
