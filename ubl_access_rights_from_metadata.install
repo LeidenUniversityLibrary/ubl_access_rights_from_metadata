@@ -62,4 +62,7 @@ function ubl_access_rights_from_metadata_update_7200() {
   if (db_table_exists('cache_ubl_access_rights_from_metadata_access_rights_value')) {
     db_drop_table('cache_ubl_access_rights_from_metadata_access_rights_value');
   }
+  if (!db_table_exists('cache_ubl_access_rights_from_metadata_md_value')) {
+    db_create_table('cache_ubl_access_rights_from_metadata_md_value', drupal_get_schema_unprocessed('system', 'cache'));
+  }
 }

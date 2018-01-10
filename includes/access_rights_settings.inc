@@ -12,32 +12,36 @@ function ubl_access_rights_from_metadata_access_rights_settings_for_object($obje
   
   $conditionconfig = $config['condition'];
   $conditions = array();
+  $reason = array();
   $conditionsmet = array();
   $isipdependent = FALSE;
 
   foreach ($conditionconfig as $conditionname => $conditionvalues) {
-dpm($conditionvalues, $conditionname);
     $conditions[$conditionname] = _ubl_access_rights_from_metadata_evaluate_condition($conditionvalues, $object, $conditions, $config);
     if ($conditions[$conditionname]) {
-      if (!$isipdependent && _ubl_access_rights_from_metadata_is_ip_dependent($conditionname, $config)) {
-        $isipdependent = TRUE;
-      }
+      $conditionsmet[$conditionname] = FALSE;
     }
   }
   
   $accessconfig = $config['access'];
   foreach ($accessconfig as $accessname => $accessvalues) {
     if (isset($conditions[$accessname]) && $conditions[$accessname]) {
-      $conditionsmet[] = $accessname;
+      foreach ($accessvalues as $key => $value) {
+        if (!isset($accessrights[$key])) {
+          $reason[$key][$accessname] = $object->id;
+        }
+      }
       $accessrights = $accessrights + $accessvalues;
+      $conditionsmet[$accessname] = TRUE;
+      if (!$isipdependent && _ubl_access_rights_from_metadata_is_ip_dependent($accessname, $config)) {
+        $isipdependent = TRUE;
+      }
     }
   }
-  if (!empty($accessrights)) {
-    $accessrights['_conditions_met'] = $conditionsmet;
-  }
+  $accessrights['_conditions_met'] = $conditionsmet;
   $accessrights['_ip_dependent'] = $isipdependent;
+  $accessrights['_reasons'] = $reason;
 
-dpm($conditions, 'conditions for object '. $object->id);
   return $accessrights;
 }
 
@@ -51,7 +55,6 @@ function _ubl_access_rights_from_metadata_is_ip_dependent($conditionname, $confi
       $isipdependent = $isipdependent || _ubl_access_rights_from_metadata_is_ip_dependent($subconditionname, $config);
     }
   }
-dpm(array('isip' => $isipdependent, 'config' => $config['condition'][$conditionname]), $conditionname);
   return $isipdependent;
 }
 
@@ -111,7 +114,6 @@ function _ubl_access_rights_from_metadata_evaluate_condition($conditionvalues, $
     // NOT
     $result = !$result;
   }
-dpm(array('trues' => $trues, 'results' => $results, 'result' => $result), $object->id);
   return $result;
 }
 
@@ -126,44 +128,75 @@ function _ubl_access_rights_from_metadata_comparator_equals($value1, $value2) {
   return ($value1 === $value2);
 }
 
+function _ubl_access_rights_from_metadata_comparator_afterDateISO8601($value1, $value2) {
+  $date1 = _ubl_access_rights_from_metadata_comparator_date_ISO8601_normalizer($value1);  
+  $date2 = _ubl_access_rights_from_metadata_comparator_date_ISO8601_normalizer($value2);  
 
-/*
+  if ($date1 === FALSE || $date2 === FALSE) {
+    return FALSE;
+  }
 
-function _ubl_access_rights_from_metadata_client_ip_in_range($ipranges) {
-  $isinrange = FALSE;
-  $clientip = ip_address();
-  $clientiphex = ipToHex($clientip);
-  if ($clientiphex) {
-    foreach ($ipranges as $iprange) {
-      $min = $iprange['min'];
-      $max = $iprange['max'];
-      if (strcmp($min, $clientiphex) <= 0 && strcmp($clientiphex, $max) <= 0) {
-        $isinrange = TRUE;
-        continue;
-      }
+  return ($date1 > $date2);
+}
+
+function _ubl_access_rights_from_metadata_comparator_beforeDateISO8601($value1, $value2) {
+  $date1 = _ubl_access_rights_from_metadata_comparator_date_ISO8601_normalizer($value1);  
+  $date2 = _ubl_access_rights_from_metadata_comparator_date_ISO8601_normalizer($value2);  
+
+  if ($date1 === FALSE || $date2 === FALSE) {
+    return FALSE;
+  }
+
+  return ($date1 < $date2);
+}
+
+function _ubl_access_rights_from_metadata_comparator_date_ISO8601_normalizer($value) {
+  $matches = array();
+  if ($value === 'today') {
+    return date("Y-m-d");
+  }
+  elseif ($value === 'now') {
+    return date("Y-m-d\TH:i:s\Z");
+  }
+  elseif (preg_match('/^(\d{4})-?(\d\d)-?(\d\d)$/', $value, $matches) === 1) {
+    return $matches[1] . '-' . $matches[2] . '-' . $matches[3]; 
+  }
+  elseif (preg_match('/^(\d{4})-?(\d\d)-?(\d\d)T(\d\d):?(\d\d):?(\d\d)Z?$/', $value, $matches) === 1) {
+    return $matches[1] . '-' . $matches[2] . '-' . $matches[3] . 'T' . $matches[4] . ':' . $matches[5] . ':' . $matches[6] . 'Z'; 
+  }
+  elseif (preg_match('/^(\d{4})-?(\d\d)-?(\d\d)T(\d\d):?(\d\d):?(\d\d)([+-])(\d\d)(?::?(\d\d))?$/', $value, $matches) === 1) {
+    $day = $matches[3];
+    $hour = $matches[4];
+    $minute = $matches[5];
+    $factor = ($matches[7] === '-')?1:-1; // T22:30+04:00 => T18:30Z
+    $offsethour = $matches[8];
+    $offsetmin = $matches[9];
+    $minute += $factor * $offsetmin;
+    if ($minute < 0) {
+      $minute += 60;
+      $hour -= 1;
     }
+    if ($minute > 59) {
+      $minute -= 60;
+      $hour += 1;
+    }
+    $hour += $factor * $offsethour;
+    if ($hour < 0) {
+      $hour += 24;
+      $day -= 1;
+    }
+    if ($hour > 23) {
+      $hour -= 24;
+      $day += 1;
+    }
+    // there might be some problems with specific dates (e.g. 2018-01-01T01:00:00+04:00 becomes 2018-01-00T21:00Z),
+    // but this isn't that big of a problem when comparing dates
+    return $matches[1] . '-' . $matches[2] . '-' . $day . 'T' . $hour . ':' . $minute . ':' . $matches[6] . 'Z'; 
   }
-  return $isinrange;
-}
-
-function ubl_access_rights_from_metadata_is_request_from_server($object) {
-  $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
-  if (!$configlocation) {
-    return;
+  else {
+    return FALSE;
   }
-  $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
-  $ipranges = $config['_config']['general']['ip_ranges']; 
-  return _ubl_access_rights_from_metadata_client_ip_in_range($ipranges);
 }
-
-function ubl_access_rights_from_metadata_get_rights_source_settings($config) {
-  if (isset($config['_config']['rightssource'])) {
-    return $config['_config']['rightssource'];
-  }
-  return array();
-}
-
-*/
 
 function ubl_access_rights_from_metadata_unfold_dsid_array($cnfg, $key, $obj, $dontmessdsids = array()) {
   if (!isset($cnfg[$key])) {

@@ -76,6 +76,11 @@ function ubl_access_rights_from_metadata_admin_form(array $form, array &$form_st
     if ($defaultsetting['type'] === 'dsids') {
       $default = implode(',', $default);
     }
+    elseif ($defaultsetting['type'] === 'boolean') {
+      if ($default !== '') {
+        $default = ($default?'TRUE':'FALSE');
+      }
+    }
     $form['config']['defaults'][$defaultkey] = array(
       '#type' => 'textfield',
       '#title' => $defaultsetting['title'],
@@ -115,9 +120,14 @@ function ubl_access_rights_from_metadata_admin_form_validate(array $form, array 
         }
       }
     }
-    elseif($defaultsetting['type'] === 'url') {
+    elseif ($defaultsetting['type'] === 'url') {
       if (filter_var($value, FILTER_VALIDATE_URL) === FALSE) {
         form_set_error($defaultkey, t("%title should be a URL", array("%title" => $defaultsetting['title'])));
+      }
+    }
+    elseif ($defaultsetting['type'] === 'boolean') {
+      if ($value !== 'TRUE' && $value !== 'FALSE') {
+        form_set_error($defaultkey, t("%title should be a TRUE or FALSE (or empty)", array("%title" => $defaultsetting['title'])));
       }
     }
   }
@@ -138,6 +148,14 @@ function ubl_access_rights_from_metadata_admin_form_submit(array $form, array &$
   foreach ($defaults as $defaultkey => $defaultsetting) {
     if ($defaultsetting['type'] === 'dsids') {
       variable_set('ubl_access_rights_from_metadata_default_' . $defaultkey, explode(',', $form_state['values'][$defaultkey]));
+    }
+    elseif ($defaultsetting['type'] === 'boolean') {
+      if ($form_state['values'][$defaultkey] === '') {
+        variable_del('ubl_access_rights_from_metadata_default_' . $defaultkey);
+      }
+      else {
+        variable_set('ubl_access_rights_from_metadata_default_' . $defaultkey, ($form_state['values'][$defaultkey] === 'TRUE')?TRUE:FALSE);
+      }
     }
     else {
       variable_set('ubl_access_rights_from_metadata_default_' . $defaultkey, $form_state['values'][$defaultkey]);

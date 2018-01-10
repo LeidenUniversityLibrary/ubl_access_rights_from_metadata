@@ -27,6 +27,7 @@
 
 // Permissions.
 define('UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN', 'Access rights from metadata admin');
+define('UBL_ACCESS_RIGHTS_FROM_METADATA_OBJECT', 'Access rights from metadata object');
 
 /**
  * Implements hook_init().
@@ -58,7 +59,7 @@ function ubl_access_rights_from_metadata_menu() {
     'weight' => 0,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('access_rights_view_form', 2),
-    'access arguments' => array(UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN),
+    'access arguments' => array(UBL_ACCESS_RIGHTS_FROM_METADATA_OBJECT),
     'file' => 'includes/object.form.inc',
   );
 
@@ -71,8 +72,10 @@ function ubl_access_rights_from_metadata_menu() {
 function ubl_access_rights_from_metadata_permission() {
   return array(
     UBL_ACCESS_RIGHTS_FROM_METADATA_ADMIN => array(
-      'title' => t('Access rights from metadata admin'),
-      'description' => t('Access rights from metadata admin'),
+      'title' => t('Administer configuration'),
+    ),
+    UBL_ACCESS_RIGHTS_FROM_METADATA_OBJECT => array(
+      'title' => t('See object\'s access rights'),
     ),
   );
 }
@@ -208,6 +211,23 @@ function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
 }
 
 /**
+ * Implements hook_islandora_object_access($op, $object, $user)
+ **/
+function ubl_access_rights_from_metadata_islandora_object_access($op, $object, $user) {
+  if ($op === ISLANDORA_VIEW_OBJECTS) {
+    $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
+    if (!$configlocation) {
+      return NULL;
+    }
+
+    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+
+    return ubl_access_rights_from_metadata_accessible_object($object);
+  }
+  return NULL;
+}
+
+/**
  * Implements hook_islandora_datastream_access()
  **/
 function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islandora_datastream, $user) {
@@ -217,19 +237,8 @@ function ubl_access_rights_from_metadata_islandora_datastream_access($op, $islan
       return NULL;
     }
   
-    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
-    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
-  
     $obj = $islandora_datastream->parent;
     $dsid = $islandora_datastream->id;
-  
-/*
-TODO ???
-    if (ubl_access_rights_from_metadata_is_request_from_server($obj)) {
-      // this is a request from an Islandora server, so let someone else handle the access.
-      return NULL;
-    }
-*/
   
     return _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($obj, $dsid, $user);
   }
@@ -237,7 +246,6 @@ TODO ???
 }
 
 function _ubl_access_rights_from_metadata_islandora_datastream_access_on_object($obj, $dsid, $user) {
-  // TODO: one-time retrieval of settings
   // Check if the datastream is restricted.
   $restricted = ubl_access_rights_from_metadata_restricted_dsids($obj);
   if (in_array($dsid, $restricted)) {
@@ -272,7 +280,6 @@ function ubl_access_rights_from_metadata_islandora_datastream_modified(AbstractO
     $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
     if (isset($config['_config']['rightssource']['dsid']) && $datastream->id === $config['_config']['rightssource']['dsid']) {
       module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/xacml');
-      module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
      
       if (variable_get('ubl_access_rights_from_metadata_enable_xacml', FALSE)) {
         // Set XACML rights according to configuration.
@@ -310,13 +317,14 @@ function ubl_access_rights_from_metadata_boot() {
       $object = islandora_object_load($objectid);
       if ($object) {
         module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+        module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
 
-/* TODO : find a way...
-        $fromobj = NULL;
-        if (ubl_access_rights_from_metadata_is_ip_dependent($object, $fromobj)) {
+        $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
+        $settings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($object, $config);
+
+        if (isset($settings['_ip_dependent']) && $settings['_ip_dependent']) {
           drupal_page_is_cacheable(FALSE);
         }
-*/
       }
     }
   }

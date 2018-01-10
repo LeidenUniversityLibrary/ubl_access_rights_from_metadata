@@ -12,9 +12,9 @@ function ubl_access_rights_from_metadata_get_metadata_value($obj, $config, $need
   if ($rebuildcache) {
     unset($id2mdvalue[$id]);
   }
-  if (!isset($id2mdvalue[$id])) {
+  if (!isset($id2mdvalue[$id][$neededmdkey])) {
     $cachename = $id;
-    $cachebin = 'cache_ubl_access_rights_from_metadata_metadata_value';
+    $cachebin = 'cache_ubl_access_rights_from_metadata_md_value';
     if (!$rebuildcache) {
       if ($cache = cache_get($cachename, $cachebin)) {
         $found = $cache->data;

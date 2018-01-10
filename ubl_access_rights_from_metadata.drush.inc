@@ -45,12 +45,14 @@ function ubl_access_rights_from_metadata_drush_command() {
     'options' => array(
       'collection' => 'Mandatory, one collection ID.',
       'configuration' => 'Mandatory, the absolute filepath to an ini file.',
+      'limit_to_object' => 'Optional, limit the access rights finding to the object itself, so do not use its parent or the default settings.',
     ),
     'aliases' => array('cars'),
     'examples' => array(
       'drush --user=admin check_access_rights_settings --collection=islandora:root --configuration=/path/to/a/ini/file',
       'drush --user=admin check_access_rights_settings --collection=islandora:root --configuration=/url/to/a/ini/file',
       'drush --user=admin cars --collection=islandora:root --configuration=/url/to/a/ini/file',
+      'drush --user=admin cars --collection=islandora:root --configuration=/url/to/a/ini/file --limit_to_object',
     ),
   );
   return $items;
@@ -138,9 +140,11 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_settings_vali
 function drush_ubl_access_rights_from_metadata_check_access_rights_settings() {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
 
   $configlocation = drush_get_option('configuration');
   $collection = drush_get_option('collection');
+  $limittoobject = drush_get_option('limit_to_object');
 
   $collectionobj = islandora_object_load($collection);
   $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
@@ -151,7 +155,12 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_settings() {
       $cid = $colobj['object']['value'];
       $cobj = islandora_object_load($cid);
       if ($cobj) {
-        $ars = ubl_access_rights_from_metadata_access_rights_settings_for_object($cobj, $config); 
+        if ($limittoobject) {
+          $ars = ubl_access_rights_from_metadata_access_rights_settings_for_object($cobj, $config); 
+        }
+        else {
+          $ars = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($cobj, $config);
+        }
         $av = '';
         if (isset($ars['access_text'])) {
           $av = $ars['access_text'];

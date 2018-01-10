@@ -42,57 +42,70 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
   if ($configlocation) {
     $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
     $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($object, $config, NULL); 
-    $from = '';
-    if (isset($accesssettings['source_of_settings']) && strlen($accesssettings['source_of_settings']) > 0) {
-      $from = ' <em>(from access rights of ' . $accesssettings['source_of_settings'] . ')</em>';
-    }
-    $table = '<TR><TH>' . t('Conditions met') . '</TH><TD>' . (empty($accesssettings['_conditions_met'])?"<em>(none)</em>":implode(",", $accesssettings['_conditions_met'])) . $from . '</TD></TR>';
 
-    $fromobjid = '';
-    $accessible = ubl_access_rights_from_metadata_accessible_dsids($object, $fromobjid);
-    $accessible = (count($accessible) > 0)?implode(', ', $accessible):'<em>' . t('Undefined') . '</em>';
-    if ($fromobjid) {
-      $accessible .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
+    $table = '<TR><TH>' . t('Conditions met') . '</TH><TD>';
+    if(empty($accesssettings['_conditions_met'])) {
+      $table .= "<em>(none)</em>";
     }
+    else {
+      foreach ($accesssettings['_conditions_met'] as $cond => $isaccesscond) {
+        if ($isaccesscond) {
+          $table .= '<strong>' . $cond . '</strong>';
+        }
+        else {
+          $table .= $cond;
+        }
+        $table .= ' ';
+      }
+    } 
+    $table .= '</TD></TR>';
+
+    $accessible = ubl_access_rights_from_metadata_accessible_object($object);
+    $accessible = (($accessible !== NULL)?($accessible?"FALSE":"TRUE"):'<em>' . t('Undefined') . '</em>');
+    $accessible .= ' ' . _access_rights_view_reason($accesssettings, 'deny_viewing', $object->id);
+    $table .= '<TR><TH>' . t('Deny viewing') . '</TH><TD>' . $accessible . '</TD></TR>';
+
+    $accessible = ubl_access_rights_from_metadata_accessible_dsids($object);
+    $accessible = (count($accessible) > 0)?implode(', ', $accessible):'<em>' . t('None') . '</em>';
+    $accessible .= ' ' . _access_rights_view_reason($accesssettings, 'allow_access_to_dsid', $object->id);
     $table .= '<TR><TH>' . t('Accessible datastreams') . '</TH><TD>' . $accessible . '</TD></TR>';
      
     $fromobjid = '';
-    $restricted = ubl_access_rights_from_metadata_restricted_dsids($object, $fromobjid);
-    $restricted = (count($restricted) > 0)?implode(', ', $restricted):'<em>' . t('Undefined') . '</em>';
-    if ($fromobjid) {
-      $restricted .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
-    }
+    $restricted = ubl_access_rights_from_metadata_restricted_dsids($object);
+    $restricted = (count($restricted) > 0)?implode(', ', $restricted):'<em>' . t('None') . '</em>';
+    $restricted .= ' ' . _access_rights_view_reason($accesssettings, 'deny_access_to_dsid', $object->id);
     $table .= '<TR><TH>' . t('Restricted datastreams') . '</TH><TD>' . $restricted . '</TD></TR>';
      
     $fromobjid = '';
-    $downloadable = ubl_access_rights_from_metadata_downloadable_dsids_with_label($object, $fromobjid);
+    $downloadable = ubl_access_rights_from_metadata_downloadable_dsids_with_label($object);
     $table .= '<TR><TH>' . t('Downloadable datastreams') . '</TH>';
     if (count($downloadable) > 0) {
       $table .= '<TD>';
       foreach ($downloadable as $dsid => $text) {
         $table .= $dsid . ' => ' . $text . '<BR/>'; 
       }
-      if ($fromobjid) {
-        $table .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
-      }
+      $table .= ' ' . _access_rights_view_reason($accesssettings, 'provide_download_of_dsid', $object->id);
       $table .= '</TD>';
     }
     else {
       $table .= '<TD><em>' . t('None') . '</em>';
-      if ($fromobjid) {
-        $table .= ' <em>(from access rights of ' . $fromobjid . ')</em>';
-      }
+      $table .= ' ' . _access_rights_view_reason($accesssettings, 'provide_download_of_dsid', $object->id);
       $table .= '</TD>';
     }
     $table .= '</TR>';
 
     $fromobjid = '';
-    $accessdesc = ubl_access_rights_from_metadata_access_description($object, $fromobjid);
-    $from = ($fromobjid)?' <em>(from access rights of ' . $fromobjid . ')</em>':'';
+    $accessdesc = ubl_access_rights_from_metadata_access_description($object);
+    $from = _access_rights_view_reason($accesssettings, 'access_text', $object->id);
     $table .= '<TR><TH>' . t('Access text') . '</TH><TD>' . $accessdesc['accesstext'] . $from . '</TD></TR>';
+    $from = _access_rights_view_reason($accesssettings, 'access_usetext', $object->id);
     $table .= '<TR><TH>' . t('Access use text') . '</TH><TD>' . $accessdesc['accessusetext'] . $from . '</TD></TR>';
+    $from = _access_rights_view_reason($accesssettings, 'access_link', $object->id);
     $table .= '<TR><TH>' . t('Access link') . '</TH><TD>' . $accessdesc['accesslink'] . $from . '</TD></TR>';
+    $from = _access_rights_view_reason($accesssettings, 'access_image', $object->id);
     $table .= '<TR><TH>' . t('Access image') . '</TH><TD>' . $accessdesc['accessimage'] . $from . '</TD></TR>';
+    $ipdependent = (isset($accesssettings['_ip_dependent']) && $accesssettings['_ip_dependent'])?t('yes'):t('no');
+    $table .= '<TR><TH>' . t('IP dependent') . '</TH><TD>' . $ipdependent . ' (current ip address is: ' . ip_address() . ')</TD></TR>';
   }
   else {
     $table = '<TR><TD>' . t('No configuration location') . '</TD></TR>';
@@ -103,4 +116,31 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
   );
 
   return $form;
+}
+
+
+function _access_rights_view_reason($accesssettings, $type, $forobjectid) {
+  $reason = '';
+  if (isset($accesssettings['_reasons'][$type])) {
+    foreach ($accesssettings['_reasons'][$type] as $condition => $objectid) {
+      if (strlen($reason) > 0) {
+        $reason .= ', ';
+      }
+      if ($objectid === 'default') {
+        $reason .= t('of default value');
+      }
+      else {
+        if ($objectid === $forobjectid) {
+          $reason .= t('condition "%condition" is met', array('%condition' => $condition));
+        }
+        else {
+          $reason .= t('condition "%condition" is met for object "%object"', array('%condition' => $condition, '%object' => $objectid));
+        }
+      } 
+    }
+    if (strlen($reason) > 0) {
+      $reason = ' (<em>' . t('because') . ' ' . $reason . '</em>)';
+    }
+  }
+  return $reason;
 }

@@ -25,7 +25,6 @@
  */
 
 function ubl_access_rights_from_metadata_xacml_modify_if_needed($obj, $config) {
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
 
   $accessrightsvalue = ubl_access_rights_from_metadata_get_access_rights_value($obj, $config);
@@ -41,7 +40,6 @@ function ubl_access_rights_from_metadata_xacml_modify_if_needed($obj, $config) {
 }
 
 function ubl_access_rights_from_metadata_xacml_modify_children($obj, $config, $accesssettings) {
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_value');
 
   if (in_array('islandora:bookCModel', $obj->models)) {
     if (module_load_include('inc', 'islandora_paged_content', 'includes/utilities')) {
@@ -74,8 +72,8 @@ function ubl_access_rights_from_metadata_xacml_modify_with_settings($obj, $acces
   $xacml = NULL;
   $haschanges = FALSE;
 
-  $denydsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
-  $allowdsids = _ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
+  $denydsids = ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'deny_access_to_dsid', $obj, array('RELS-INT','RELS-EXT','POLICY'));
+  $allowdsids = ubl_access_rights_from_metadata_unfold_dsid_array($accesssettings, 'allow_access_to_dsid', $obj);
   $allowedroles = isset($accesssettings['allow_access_for_role'])?$accesssettings['allow_access_for_role']:array();
 
   // Remove the allowed dsids from the denied dsids.

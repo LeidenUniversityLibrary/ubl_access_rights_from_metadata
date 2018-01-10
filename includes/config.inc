@@ -95,7 +95,7 @@ function _ubl_access_rights_from_metadata_valid_config_content($inicontent, $ini
       }
       elseif (isset($values['comparator'])) {
         $prefix = '_ubl_access_rights_from_metadata_comparator_';
-        $compfunc = $prefix . $values['comparator'];
+        $compfunc = $prefix . preg_replace('/[^a-zA-Z0-9]/', '', $values['comparator']);
         if (!function_exists($compfunc)) {
           $allfuncs = get_defined_functions();
           $comparators = array_filter($allfuncs['user'], function($v) { return (substr($v, 0, strlen($prefix)) === $prefix); });
@@ -127,6 +127,7 @@ function _ubl_access_rights_from_metadata_valid_config_content($inicontent, $ini
     elseif (has_prefix($key, 'access:')) {
       $mandatory = array();
       $optional = array(
+        'deny_viewing' => '/^1?$/',
         'deny_access_to_dsid' => array(),
         'allow_access_to_dsid' => array(),
         'provide_download_of_dsid' => array(),
@@ -194,7 +195,7 @@ function _ubl_access_rights_from_metadata_valid_subkeys($config, $section, $mand
         return FALSE;
       }
       if (is_string($config[$k]) && strlen($all[$k]) > 0 && preg_match($all[$k], $config[$k]) === 0) {
-        $error = t("Section '@section' contains key '@key' with incorrect value '$@value'.", array("@section" => $section, "@key" => $k, "@value" => $v));
+        $error = t("Section '@section' contains key '@key' with incorrect value '@value'.", array("@section" => $section, "@key" => $k, "@value" => $config[$k]));
         return FALSE;
       }
     }
