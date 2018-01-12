@@ -94,7 +94,7 @@ function ubl_access_rights_from_metadata_detail_tools_block_view() {
   }
 
   module_load_include('inc', 'islandora', 'includes/utilities');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
 
   if (arg(1) == 'object' && islandora_is_valid_pid(arg(2))) {
     drupal_add_css(drupal_get_path('module', 'ubl_access_rights_from_metadata') . '/css/ubl_details_tools.css');
@@ -187,7 +187,7 @@ function ubl_access_rights_from_metadata_preprocess(&$variables, $hook) {
   if ($hook === 'islandora_book_book') {
     // pages of a book are retrieved with a server ip address, thus can not check if pages are within IP range... do it here...
     if (isset($variables['object']) && isset($variables['viewer_id'])) {
-      module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+      module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
 
       $object = $variables['object'];
 
@@ -220,7 +220,7 @@ function ubl_access_rights_from_metadata_islandora_object_access($op, $object, $
       return NULL;
     }
 
-    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+    module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
 
     return ubl_access_rights_from_metadata_accessible_object($object);
   }
@@ -316,7 +316,7 @@ function ubl_access_rights_from_metadata_boot() {
     if (islandora_is_valid_pid($objectid)) {
       $object = islandora_object_load($objectid);
       if ($object) {
-        module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+        module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
         module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
 
         $config = ubl_access_rights_from_metadata_get_configuration($configlocation);

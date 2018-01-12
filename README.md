@@ -54,14 +54,14 @@ A "metadata:" section can contain the following keys:
 This part of the configuration is meant to define the conditions.
 This part should contain 1 or more sections. Each section is named "condition:key" where "key" is a chosen value.
 
-A "condition:" section can contain the following keys:
- * `user_role` (multiple values, optional)
- * `ip_range` (multiple values, optional)
- * condition (multiple values, optional)
- * operator (optional)
- * metadata (optional)
- * comparator (optional)
- * value (optional)
+A "condition:" section can contain a combination of the following keys:
+ * `user_role`: the name of the user role. If the user with this role is logged on, this condition is met. (multiple values, optional)
+ * `ip_range`: if the users IP falls in this range, the condition is met. A range should be defined like 1.1.1.1-2.2.2.2, IPv4 and IPv6 are supported. (multiple values, optional)
+ * condition: use this to combine previously defined conditions, the "operator" key defines how these conditions should be combined. (multiple values, optional)
+ * operator: if combined with key "condition" this can have the following value: "and" (all conditions should be met), "or" (any condition should be met) or "negate" (disproves the condition). (optional)
+ * metadata: use together with comparator and value. This value should be defined as a "metadata:" section. (optional)
+ * comparator: use together with metadata and value. Defines how the metadata compares to the value. Valid values include: "equals" (metadata value is exactly the same as value), "lowercaseLetterMatch" (only letters are used to compare and uppercase is seen as lowercase. For example "Test." is the same as "1tE.st!" with this comparator), "afterDateISO8601" and "beforeDateISO8601" (compare dates in ISO8601 format. after is TRUE if metadata date is after the value date. before is TRUE if metadata date is chronologically before the value date. If one of the values is not a valid ISO8601 date, the condition will be FALSE. Value can be a ISO8601 date or "today" (date of current day) or "now" (date and time of current moment).). (optional)
+ * value: use together with metadata and comparator. Should be a string value. (optional)
 
 ### Access restrictions
 
@@ -70,13 +70,13 @@ This part contains 1 or more sections. Each section is named "access:`condition_
 
 A "access:" section can contain the following keys:
  * `deny_viewing`: TRUE or FALSE, defines is the whole object can be viewed
- * `deny_access_to_dsid` (multiple values, optional)
- * `allow_access_to_dsid` (multiple values, optional)
- * `provide_download_of_dsid` (multiple values, optional)
- * `access_text`' (optional)
- * `access_usetext`' (optional)
- * `access_link`' (optional)
- * `access_image`' (optional)
+ * `deny_access_to_dsid`: a datastream ID of the datastream to deny view access to. Make sure a administrator always has access to datastreams. (multiple values, optional)
+ * `allow_access_to_dsid`: a datastream ID of the datastream to allow view access to. (multiple values, optional)
+ * `provide_download_of_dsid`: a datastream ID of the datastream that is allowed to be downloaded. Remember to give access to the datastream as well. (multiple values, optional)
+ * `access_text`: the access text. (optional)
+ * `access_usetext`: the access use text. (optional)
+ * `access_link`: the absolute link to the access rights explanation page. (optional)
+ * `access_image`: the absolute URL of an image. (optional)
 
 ## Documentation
 
@@ -137,5 +137,5 @@ If you would like to contribute to this module, please contact the current maint
 ## License
 
 [GPLv3](LICENSE.txt)
-Copyright 2017 Leiden University Library
+Copyright 2017-2018 Leiden University Library
 

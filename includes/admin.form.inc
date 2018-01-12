@@ -31,7 +31,7 @@
  */
 
 function ubl_access_rights_from_metadata_admin_form(array $form, array &$form_state) {
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
 
   $form = array();
 
@@ -135,7 +135,7 @@ function ubl_access_rights_from_metadata_admin_form_validate(array $form, array 
 
 function ubl_access_rights_from_metadata_admin_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
+  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
 
   $oldconfiglocation = variable_get('ubl_access_rights_from_metadata_config_location');
   variable_set('ubl_access_rights_from_metadata_config_location', $form_state['values']['location']);

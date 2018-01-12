@@ -31,7 +31,6 @@
 function access_rights_view_form(array $form, array &$form_state, AbstractObject $object) {
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/config');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
 
   $form['ubl_access_rights_from_metadata'] = array(
     '#type' => 'fieldset',
@@ -41,7 +40,7 @@ function access_rights_view_form(array $form, array &$form_state, AbstractObject
   $configlocation = variable_get('ubl_access_rights_from_metadata_config_location');
   if ($configlocation) {
     $config = ubl_access_rights_from_metadata_get_configuration($configlocation);
-    $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($object, $config, NULL); 
+    $accesssettings = ubl_access_rights_from_metadata_get_access_settings_from_object_or_parent($object, $config); 
 
     $table = '<TR><TH>' . t('Conditions met') . '</TH><TD>';
     if(empty($accesssettings['_conditions_met'])) {

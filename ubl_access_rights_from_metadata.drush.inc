@@ -140,7 +140,6 @@ function drush_ubl_access_rights_from_metadata_check_access_rights_settings_vali
 function drush_ubl_access_rights_from_metadata_check_access_rights_settings() {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/access_rights_settings');
-  module_load_include('inc', 'ubl_access_rights_from_metadata', 'includes/ui');
 
   $configlocation = drush_get_option('configuration');
   $collection = drush_get_option('collection');
