@@ -1,3 +1,5 @@
+Deprecated, see for version 2: https://github.com/LeidenUniversityLibrary/islandora_conditional_access_rights
+
 # UBL access rights from metadata
 
 ## Introduction
